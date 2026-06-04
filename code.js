@@ -21,6 +21,7 @@ const PAGE_ORDER = [
   "■ B8 — Admin Backend",
   "■ W1 — Web Admin Frontend",
   "■ M1 — Flutter Foundation",
+  "■ M2 — Onboarding & Auth",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -1811,6 +1812,120 @@ const BACKEND_PAGES = [
       "Decisions logged in Handoff · NOT code blockers · feature work proceeds",
     ],
   },
+  {
+    name: "■ M2 — Onboarding & Auth",
+    kind: "m2",
+    kicker: "M2 · MOBILE · ONBOARDING & AUTH · 01–15 · S-01/02/03 · G-06 · FIRST FEATURE PACK",
+    title: "Onboarding & Auth · Figma 01–15 + S-01/S-02/S-03 + G-06",
+    subtitle: "First Flutter feature pack · builds on M1 foundation · consumes B3 auth endpoints. Light + dark + RTL day-1 · Cairo for Arabic · numbers/prices LTR · M1 session state machine drives routing · server is source of truth · generic non-enumerating error messages · GDPR consent persisted with version + timestamp.",
+    rules: [
+      { t: "warning", v: "Use M1 tokens / widgets · NEVER hardcode hex · NEVER re-pick fonts · every screen renders light + dark + RTL · Cairo for Arabic · numbers/prices LTR" },
+      { t: "warning", v: "Server is source of truth for auth state · UI reflects M1 session machine · loggedOut → pendingVerification → 2FA → active → locked · UI never decides outcomes locally" },
+      { t: "warning", v: "Generic non-enumerating error messages · NEVER reveal whether email/phone exists · mirror B3 behavior · 'invalid credentials' not 'user not found'" },
+      { t: "warning", v: "Secure token handling per M1 · Keychain / Keystore · refresh rotation · NO tokens in logs · NO tokens in plain storage" },
+      { t: "warning", v: "GDPR consent (G-06) persisted via API with version + timestamp BEFORE onboarding proceeds · real persisted decision · NOT a forgotten checkbox" },
+      { t: "purple",  v: "Haptics + reduced-motion per accessibility pass · wrong OTP = error haptic · primary tap = light · onboarding hero respects reduced-motion · cross-fade fallback" },
+      { t: "orange",  v: "Resend-with-cooldown on OTP / verification · lockout / rate-limit feedback graceful · NO crash · clear localized message" },
+      { t: "teal",    v: "Permissions requested contextually · NEVER block whole app on denied optional permission · graceful degrade · re-prompt at the moment of need" },
+    ],
+    onboardingFlow: [
+      { t: "warning", k: "G-06 · GDPR Consent",        v: "Precedes onboarding on first launch · POST /consents (version + timestamp · region) · refusal = blocks app per regional law · soft-decline UX where allowed" },
+      { t: "orange",  k: "01 · Splash",                v: "Brand mark · DM Serif Display · token-driven · respects reduced-motion (no parallax) · auto-routes after readiness check" },
+      { t: "orange",  k: "02 · Onboarding Hero",       v: "Premium aspirational · 'Stay connected anywhere in the Gulf' · token typography · Lottie/cross-fade per reduced-motion · skip available" },
+      { t: "purple",  k: "03 · Services",              v: "eSIM · VoIP · VPN · AI Advisor entry-point preview · brand-role colors (orange/teal/purple) · 3 cards" },
+      { t: "purple",  k: "04 · Coverage",              v: "Map / list of supported countries · Gulf prominence · live data from /catalog/coverage · empty/loading/error states from M1" },
+      { t: "warning", k: "05 · Language Select",       v: "ar / en · default Arabic for Gulf locale per device · persists via M1 locale storage · runtime switch (no restart)" },
+      { t: "warning", k: "06 · Region Select",         v: "Gulf-first · UAE / KSA / Bahrain / Oman / Qatar / Kuwait first · then global · sets market_region · drives regional_flags later" },
+      { t: "teal",    k: "07 · Permissions",           v: "Notifications request · contextual at right moment · NOT all-at-once · graceful denial · re-prompt later from Account if needed" },
+      { t: "orange",  k: "08 · Welcome / Login Gate",  v: "Login or Register routes · SSO buttons (Apple / Google) · skippable on return (re-onboarding G-15 lives in M6)" },
+    ],
+    authFlow: [
+      { t: "orange",  k: "09 · Login",                 v: "Email/phone + password · POST /auth/login · 2FA challenge if enabled → S-02 · pending verification → 11 / 14 · active → Home · generic errors only" },
+      { t: "orange",  k: "10 · Register",              v: "Gulf-first phone picker · email · password (strength meter) · captures G-06 consent inline · POST /auth/register · routes to 11 phone verification" },
+      { t: "warning", k: "11 · Phone Verification",    v: "M1 OTP input (6-digit · auto-advance · paste-aware) · POST /auth/verify-phone · resend cooldown 60s · wrong OTP = error haptic · max attempts → graceful lockout" },
+      { t: "purple",  k: "12 · Forgot Password",       v: "Email or phone input · POST /auth/forgot · ALWAYS returns generic 'if account exists, reset sent' · never enumerates" },
+      { t: "warning", k: "13 · Reset Password",        v: "Token from email/SMS link · new password + confirm · strength meter · POST /auth/reset · invalidates ALL sessions per B3 · routes to 09 login" },
+      { t: "purple",  k: "14 · Email Verification",    v: "Magic-link or 6-digit code · POST /auth/verify-email · resend cooldown · token expiry handled with retry" },
+      { t: "teal",    k: "15 · SSO Loading",           v: "Apple / Google via B3 SSO shape · OAuth handoff · loading state visible · first SSO login STILL captures G-06 consent · token storage same path" },
+      { t: "warning", k: "S-01 · 2FA Setup Wizard",    v: "QR + secret from B3 · scan or type-in · confirm 6-digit · show one-time recovery codes (download / copy / mark-saved gate) · POST /auth/2fa/enable" },
+      { t: "warning", k: "S-02 · 2FA Challenge",       v: "TOTP 6-digit OR recovery code path · paste-aware · wrong → error haptic + generic message · max attempts handled · stable across app backgrounding" },
+      { t: "teal",    k: "S-03 · Biometric Enable",    v: "M1 biometric hook · device keypair generation · server challenge signed · enrolled flag stored · skippable · convenience over existing session NOT identity" },
+    ],
+    pathLogic: [
+      { t: "orange",  k: "First-launch path", v: "G-06 → 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 · runs once · skippable on return · stored 'onboarded' flag" },
+      { t: "orange",  k: "Registration path", v: "08 → 10 → 11 (phone OTP) → S-01 (2FA setup) → S-03 (biometric enable) → Home · 2FA + biometric SKIPPABLE but encouraged" },
+      { t: "warning", k: "Login path · 2FA on", v: "08 → 09 → S-02 (2FA challenge) → Home · pending email verify → 14 first · pending phone verify → 11 first" },
+      { t: "purple",  k: "Forgot path",        v: "09 → 12 → email/SMS link → 13 → 09 (re-login) · all sessions invalidated · forces fresh login on all devices" },
+      { t: "teal",    k: "SSO path",           v: "08 → 15 → Apple/Google handoff → consent capture if first time → S-01/S-03 if first time → Home" },
+      { t: "warning", k: "Deep-link auth-aware", v: "Unauthenticated deep link → auth flow → resumes destination after active session · ties to G-04 in M6 · pending state respects original intent" },
+    ],
+    integration: [
+      { t: "orange",  k: "B3 endpoint mapping", v: "/auth/register · /auth/login · /auth/refresh · /auth/logout · /auth/verify-phone · /auth/verify-email · /auth/forgot · /auth/reset · /auth/2fa/* · /auth/sso/* · /consents" },
+      { t: "warning", k: "Repository layer",     v: "AuthRepository + ConsentRepository · returns Result<T, ApiError> from M1 · widgets switch on ApiError code · NEVER raw exceptions in widgets" },
+      { t: "warning", k: "State machine wiring", v: "Successful auth → Riverpod sessionProvider transitions to active → router redirects to Home · pending verify → routes to right verify screen · all transitions audited locally for debug" },
+      { t: "purple",  k: "Error envelope mapping", v: "B0 envelope → typed ApiError · 422 details flow into per-field form errors · 401 'invalid credentials' generic · 429 RATE_LIMITED graceful with cooldown" },
+      { t: "teal",    k: "Resend cooldown",       v: "Per-channel cooldown timer (60s default) · button disabled with countdown · backend 429 also surfaced as cooldown · stored locally to survive screen rebuild" },
+      { t: "warning", k: "Lockout handling",      v: "B3 max-attempts lockout → friendly screen with retry-after time · NEVER crash · NEVER reveal exact threshold · supports recovery via 12 forgot path" },
+    ],
+    tests: [
+      "G-06 consent captured BEFORE app proceeds · POST /consents written with version + timestamp + region · refusal blocks per regional law",
+      "Generic auth errors · login with non-existent email returns same message as wrong password · zero enumeration",
+      "Light + dark + RTL render every screen · Cairo loads for ar · DM Sans for en · numbers stay LTR inside Arabic strings",
+      "OTP wrong → error haptic + generic message · max attempts → graceful lockout · resend cooldown timer counts down 60s",
+      "Reset password invalidates all sessions · login on second device → forced re-auth after reset on first",
+      "SSO first-time capture · Apple/Google login first time → consent screen surfaces · subsequent logins skip consent",
+      "2FA setup S-01 · QR scans correctly · type-in path works · recovery codes shown ONCE · 'I saved them' gate before continue",
+      "2FA challenge S-02 · TOTP path + recovery-code path both succeed · paste-aware · wrong → error haptic",
+      "Biometric S-03 · enrolled device keypair signs server challenge · skippable · password fallback works on un-enrolled device",
+      "Deep-link auth-aware · share-link tapped while logged-out → auth flow → resumes destination after active session",
+      "Permissions denial graceful · denying notifications does NOT block app · Account screen offers re-prompt path",
+      "Reduced-motion respected · onboarding hero replaced with cross-fade · animated transitions disabled",
+      "Pending verification routing · register → 11 phone verify FIRST · email verify second · 2FA setup third · biometric last",
+      "Token storage · access + refresh in flutter_secure_storage · NEVER in SharedPreferences · uninstall clears Keychain (iOS) / Keystore (Android)",
+      "Localization runtime switch · 05 language change applies without restart · ar default for Gulf locale per device",
+    ],
+    edgeCases: [
+      "SSO provider specifics · Apple Sign-In email-relay handling · Google nonce verification · Sign-in-with-Apple display-name capture (one-shot)",
+      "Lockout thresholds · exact attempt count · lockout window · per-channel (login vs OTP vs 2FA) · UX team sign-off",
+      "Recovery-code UX · how prominently surfaced · download as PDF vs copy vs print · 'I saved them' gate strength",
+      "Email verification token expiry · how long valid · resend cadence · what happens if user clicks expired link · re-issue flow",
+      "Phone-number portability · user changes number → re-verify path · old number retains until new verified · admin-side scenarios",
+      "Returning-user re-onboarding (G-15) · what triggers it · whether to re-show language/region or skip · M6 owns this · M2 leaves hook",
+      "Consent version bump · existing user opens app after policy update · forced re-consent screen · gate before app shell · ties to A17",
+    ],
+    handoff: [
+      "M3 eSIM assumes · active session · verified user · sessionProvider in active state · phone verified · region set · entitled to make purchases",
+      "M3+ assumes · auth interceptor handles 401 silently via M1 refresh · no feature pack re-implements auth",
+      "M5 Billing assumes · 2FA enrolled state available · step-up trigger from M1 fires fresh-auth challenge for sensitive actions",
+      "M6 Account assumes · G-15 re-onboarding hook in place · permissions re-prompt path exists · consent version mismatch handled here",
+      "Web admin (W1) DOES NOT consume M2 · separate auth realm · independent state machine",
+    ],
+    pending: [
+      "SSO provider final terms · Apple developer agreement · Google OAuth consent screen approval for Gulf markets",
+      "Lockout policy numbers · attempt count + window confirmed with security team · per-channel variation",
+      "Recovery-code UX strength · 'I saved them' gate vs forced download · UX team sign-off",
+      "Onboarding skip rules · skippable on return after how many sessions · re-onboarding G-15 trigger conditions",
+      "Default locale fallback · device locale unclear → Arabic vs English · Gulf-resident vs global-resident heuristic",
+      "Permission timing · notifications at 07 vs deferred to first relevant moment · A/B test plan",
+      "Consent version handling · forced re-consent on bump vs soft-prompt · per regional law (UAE PDPL · KSA PDPL)",
+    ],
+    exit: [
+      "All 8 onboarding screens (G-06 + 01–08) live · light + dark + RTL · M1 tokens + widgets only",
+      "All 7 auth screens (09–15) + S-01/02/03 live · light + dark + RTL · Cairo + DM Sans correct",
+      "G-06 GDPR consent persisted via API with version + timestamp BEFORE onboarding proceeds",
+      "Generic non-enumerating error messages on all auth failures · zero account enumeration",
+      "Session state machine wired · loggedOut → pendingVerification → 2FA → active → locked transitions tested",
+      "B3 endpoints mapped via repository layer · Result<T,ApiError> propagates · B0 envelope mapped to typed errors",
+      "OTP resend cooldown live · 60s default · backend 429 surfaced as cooldown · graceful lockout",
+      "2FA setup + challenge + recovery-code path all green · biometric enroll signs server challenge",
+      "SSO Apple + Google flows live · first-time consent captured · token storage same path",
+      "Deep-link auth-aware routing · unauthenticated deep link resumes destination after active session",
+      "Haptics + reduced-motion respected · wrong OTP error haptic · onboarding hero cross-fade fallback",
+      "Localization runtime switch · ar default for Gulf locale · numbers stay LTR in Arabic strings",
+      "Permissions contextual · graceful denial · re-prompt path stub for M6",
+      "Edge cases logged in Handoff · NOT code blockers · M3 begins on active verified session",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -1850,6 +1965,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "b8") return buildBackendB8Page(page, spec);
   if (spec.kind === "w1") return buildBackendW1Page(page, spec);
   if (spec.kind === "m1") return buildBackendM1Page(page, spec);
+  if (spec.kind === "m2") return buildBackendM2Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -3105,6 +3221,95 @@ async function buildBackendM1Page(page, spec) {
 
   // Exit
   y = sectionHeader(page, "Exit", "Phase M1 exit checklist · first mobile phase", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildBackendM2Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 00 · Non-negotiables
+  y = sectionHeader(page, "00", "Non-negotiables · M1 tokens · server source-of-truth · GDPR persisted · generic errors", 0, y);
+  rules2col(spec.rules, 110);
+
+  // 01 · Onboarding flow (G-06 + 01–08)
+  y = sectionHeader(page, "01", "Onboarding flow · G-06 + 01–08 · first launch · skippable on return", 0, y);
+  kv2col(spec.onboardingFlow, 110);
+
+  // 02 · Auth flow (09–15 + S-01/02/03)
+  y = sectionHeader(page, "02", "Auth flow · 09–15 + S-01 / S-02 / S-03 · 2FA + biometric", 0, y);
+  kv2col(spec.authFlow, 110);
+
+  // 03 · Path logic
+  y = sectionHeader(page, "03", "Path logic · first-launch · register · login · forgot · SSO · deep-link auth-aware", 0, y);
+  kv2col(spec.pathLogic, 110);
+
+  // 04 · Integration
+  y = sectionHeader(page, "04", "Integration · B3 endpoints · repos · state machine · error envelope · cooldown · lockout", 0, y);
+  kv2col(spec.integration, 110);
+
+  // 05 · Tests
+  y = sectionHeader(page, "05", "Test surface · enumeration-free · OTP · 2FA · biometric · SSO · deep-link · localization", 0, y);
+  fullRows(spec.tests, 56, "purple", true);
+
+  // 06 · Edge cases
+  y = sectionHeader(page, "06", "Edge cases · contract gaps to confirm before/during build", 0, y);
+  fullRows(spec.edgeCases, 64, "orange", false);
+
+  // 07 · Handoff
+  y = sectionHeader(page, "07", "Handoff to M3+ · what later feature packs assume post-auth", 0, y);
+  fullRows(spec.handoff, 56, "teal", false);
+
+  // 08 · Pending
+  y = sectionHeader(page, "08", "Pending · security / UX / legal decisions · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase M2 exit checklist · first feature pack", 0, y);
   fullRows(spec.exit, 56, "teal", true);
 }
 

@@ -13,6 +13,7 @@ const PAGE_ORDER = [
   "■ B1 — Data Model",
   "■ B2 — API Contract",
   "■ B3 — Auth & Security",
+  "■ B4 — Provider Adapters",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -1008,6 +1009,115 @@ const BACKEND_PAGES = [
       "OpenAPI updated · auth state machine documented · STEP_UP_REQUIRED + RATE_LIMITED in error catalog",
     ],
   },
+  {
+    name: "■ B4 — Provider Adapters",
+    kind: "b4",
+    kicker: "B4 · BACKEND · PROVIDER ADAPTERS · ESIM · VOIP · VPN · ASYNC · WEBHOOKS",
+    title: "Provider Adapters · eSIM · VoIP · VPN · Async + Webhooks",
+    subtitle: "Sandbox + live behind a single interface · BullMQ async provisioning · webhook is source of truth · region-gating checked before enqueue · provision_status ≠ install_status · cost stored separately from price.",
+    rules: [
+      { t: "warning", v: "Business logic depends on the adapter interface only · zero provider SDK imports in modules/services" },
+      { t: "warning", v: "Two impls per provider · sandbox (deterministic · no network) + live · selected by env · tests run against sandbox" },
+      { t: "orange",  v: "Provisioning is async via BullMQ · API enqueues · job calls provider · webhook/poll confirms · API never blocks on slow provider" },
+      { t: "warning", v: "Every inbound webhook signature-verified · idempotent on (provider, event_id) · safe to receive twice" },
+      { t: "warning", v: "Provider cost stored separately from user price · both BigInt minor + currency · margin is queryable" },
+      { t: "warning", v: "Region gate (regional_flags) checked BEFORE enqueue · disabled market returns typed REGION_DISABLED 403 · never started-then-failed" },
+      { t: "warning", v: "Secrets via provider_configs + env · never hardcoded · failed jobs use bounded retries with backoff · DLQ surfaced to admin" },
+      { t: "orange",  v: "provision_status (we have it) ≠ install_status (user installed on device) · provisioning success does NOT set install_status" },
+    ],
+    adapters: [
+      { t: "orange", id: "EsimProvider", title: "eSIM adapter",
+        blurb: "Catalog sync · async provisioning · LPA + QR + Universal Link · usage sync · top-up. Provider-agnostic config-driven endpoints.",
+        methods: [
+          "syncPlans / listCatalog · pulls provider catalog into esim_plans",
+          "createOrder(planRef, idempotencyKey) → providerOrderRef",
+          "getOrderStatus(providerOrderRef) → status enum",
+          "fetchActivation → { lpaActivationString · qrPayload · universalLink · iccid }",
+          "getUsage(iccid) → { usedMb · period · recordedAt }",
+          "createTopup(iccid, planRef, idempotencyKey)",
+        ],
+        stateMachine: "esim_orders · pending → paid → provisioning → provisioned → failed",
+        webhook: "POST /webhooks/esim · provider provisioning callback · verify signature · advance order state idempotently · emit notification event",
+        notes: [
+          "On provisioned: populate esims row with LPA · QR · Universal Link · ICCID",
+          "Scheduled usage sync writes esim_usage append-only · surfaces low-balance + expiry events",
+          "App reports install separately · install_status never inferred from provision",
+        ],
+      },
+      { t: "orange", id: "VoipProvider", title: "VoIP adapter",
+        blurb: "DID search · reservation with TTL · purchase · CDR ingestion. Region-gated · KYC may be required per country.",
+        methods: [
+          "searchAvailableNumbers(country, area) · paginated · region-gated",
+          "reserveNumber(numberRef) → reservation_id with TTL",
+          "purchaseNumber(reservationId, idempotencyKey) → did",
+          "releaseNumber(numberId)",
+          "fetchCdrs(numberId, since) · webhook or pull",
+        ],
+        stateMachine: "voip_numbers · reserved → active → released · expired reservations auto-release",
+        webhook: "POST /webhooks/voip · CDR + lifecycle events · idempotent on (provider, event_id) · writes calls separately with cost minor+currency",
+        notes: [
+          "Reservation TTL enforced server-side · cron sweeps expired",
+          "CDRs append-only · cost stored separately from any user-facing price",
+          "regional_flags.voip_enabled = false → REGION_DISABLED before reserve/purchase",
+        ],
+      },
+      { t: "teal", id: "VpnProvider", title: "VPN adapter",
+        blurb: "Managed infra (e.g. WireGuard peers) or resold capacity behind the interface · server credentials live only in the live adapter.",
+        methods: [
+          "syncServers / listServers · capacity + region + enabled",
+          "issueConfig(userId, serverId) → connection config + one-shot credentials",
+          "startSession(userId, serverId) · gated by G-07 consent",
+          "endSession(sessionId) · also called on disconnect webhook",
+          "getSessionStatus(sessionId)",
+        ],
+        stateMachine: "vpn_sessions · started → ended · capacity enforced from vpn_servers",
+        webhook: "Provider session events · idempotent · update bytes_in/out + ended_at",
+        notes: [
+          "Live adapter is the only place that knows server keys · sandbox returns deterministic fake configs",
+          "regional_flags.vpn_enabled = false → REGION_DISABLED before issueConfig",
+          "G-07 VPN-legal consent (B3) must exist before issueConfig · else typed error · reject without enqueue",
+        ],
+      },
+    ],
+    crosscut: [
+      { t: "orange",  k: "Provisioning orchestrator", v: "Order created → payment confirmed (B5 emits later · accept a paid signal now) → enqueue provisioning → handle success / failure / timeout · clean awaiting-payment vs provisioning distinction" },
+      { t: "warning", k: "Retries + DLQ", v: "BullMQ exponential backoff with caps · final failure → dead-letter state · admin sees + can manual-retry · audit on retry" },
+      { t: "purple",  k: "Admin surface", v: "provider_configs read/write (UI in B8) · DLQ visibility · manual re-provision action audited · sandbox/live flag flips per provider" },
+      { t: "teal",    k: "Provider-agnostic config", v: "No commercial provider name in business code · config-driven endpoints + keys · swap provider by editing provider_configs + env" },
+      { t: "warning", k: "Region gate placement", v: "Checked at API layer BEFORE enqueue · second check at adapter layer as defense-in-depth · never partially-provisioned then refunded" },
+    ],
+    tests: [
+      "Successful provision · order pending → paid → provisioning → provisioned · esims row populated with LPA + QR + iccid",
+      "Provider failure → retry chain → dead-letter · admin sees DLQ entry · audit trail intact",
+      "Duplicate webhook idempotency · second delivery is no-op · state unchanged · no double-emit of notifications",
+      "Region-gated refusal · disabled market returns REGION_DISABLED 403 · zero provisioning row created · zero job enqueued",
+      "Reservation TTL · expired DID reservation auto-released · purchaseNumber on expired reservation rejected",
+      "Provision-vs-install separation · provisioned eSIM does NOT set install_status · separate endpoint sets install confirmation",
+      "VPN G-07 gate · issueConfig without consent record returns typed error · with consent succeeds",
+      "Cost-vs-price · provider cost recorded separately from user price · margin query returns expected delta",
+      "Sandbox determinism · same input twice → identical fixture output · safe for CI replay",
+      "Webhook signature verification · invalid signature 401 · valid + replay handled idempotently",
+    ],
+    decisions: [
+      "eSIM aggregator selection · catalog coverage Gulf + key destinations · margin · activation channels (LPA + QR + Universal Link) · webhook reliability",
+      "VoIP / DID provider · per-country availability · KYC requirements (KSA / UAE may demand) · CDR delivery (push vs pull) · pricing model",
+      "VPN infrastructure · self-hosted WireGuard peers vs resold capacity · server geographies · capacity per server · key-rotation cadence",
+      "App Store channel call (FL D2) · VPN through external PSP requires App Review judgment before iOS submission",
+      "KYC scope per market for DID purchase · which fields · how stored · retention",
+    ],
+    exit: [
+      "Three adapters live · sandbox + live skeleton · selection by env · tests pass against sandbox",
+      "BullMQ provisioning queue · success / failure / DLQ paths green",
+      "Webhooks signed + idempotent · payment + esim + voip + push wired",
+      "provision_status / install_status separation enforced + tested",
+      "Region gate enforced at API layer + defense-in-depth at adapter layer",
+      "Provider cost stored separately from price · margin queryable · admin reconciliation aware",
+      "Admin can flip a provider sandbox/live + manual re-provision (audited)",
+      "G-07 VPN consent gate enforced · issueConfig rejects without consent record",
+      "OpenAPI updated · adapter-touching endpoints + webhook schemas referenced",
+      "Live provider procurement / KYC decisions logged in Handoff · not blockers for sandbox build",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -1039,6 +1149,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "b1") return buildBackendB1Page(page, spec);
   if (spec.kind === "b2") return buildBackendB2Page(page, spec);
   if (spec.kind === "b3") return buildBackendB3Page(page, spec);
+  if (spec.kind === "b4") return buildBackendB4Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -1502,6 +1613,155 @@ async function buildBackendB3Page(page, spec) {
   // Exit
   y = sectionHeader(page, "Exit", "Phase B3 exit checklist", 0, y);
   rowList(spec.exit, 56, "teal");
+}
+
+async function buildBackendB4Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  // 00 · Non-negotiables (2-col)
+  y = sectionHeader(page, "00", "Non-negotiables", 0, y);
+  {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    const cardH = 110;
+    for (let i = 0; i < spec.rules.length; i++) {
+      const r = spec.rules[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(spec.rules.length / 2) * (cardH + 12) + 40;
+  }
+
+  // 01 · Adapter cards (full-width, rich)
+  y = sectionHeader(page, "01", "Adapters · interface · state machine · webhook · notes", 0, y);
+  {
+    const padTop = 18;
+    const headerH = 56;
+    const blurbH = 46;
+    const methodsHdrH = 24;
+    const methodRowH = 24;
+    const stateRowH = 30;
+    const webhookRowH = 50;
+    const noteRowH = 22;
+    const padBottom = 22;
+    for (let i = 0; i < spec.adapters.length; i++) {
+      const a = spec.adapters[i];
+      const accent = ACCENT[a.t] || ACCENT.orange;
+      const cardH =
+        padTop + headerH + blurbH +
+        methodsHdrH + a.methods.length * methodRowH +
+        stateRowH +
+        webhookRowH +
+        24 + a.notes.length * noteRowH +
+        padBottom;
+      const card = backendCard(page, 0, y, PAGE_W, cardH, accent);
+
+      // Header row
+      safeText(card, a.id, 24, padTop, 12, accent, PRIMARY_FONT_BOLD, 200);
+      safeText(card, a.title, 220, padTop - 4, 22, "#1C0804", PRIMARY_FONT_BOLD, PAGE_W - 260);
+
+      // Blurb
+      safeText(card, a.blurb, 24, padTop + headerH - 28, 12, "#7A6058", PRIMARY_FONT, PAGE_W - 48);
+
+      // Methods
+      let by = padTop + headerH + blurbH - 12;
+      safeText(card, "METHODS", 24, by, 10, "#7A6058", PRIMARY_FONT_BOLD, 100);
+      by += methodsHdrH - 4;
+      for (let j = 0; j < a.methods.length; j++) {
+        const dot = createRect(card, 24, by + 8, 6, 6, accent);
+        dot.cornerRadius = 3;
+        safeText(card, a.methods[j], 40, by, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 64);
+        by += methodRowH;
+      }
+
+      // State machine
+      by += 6;
+      safeText(card, "STATE", 24, by, 10, "#7A6058", PRIMARY_FONT_BOLD, 60);
+      safeText(card, a.stateMachine, 80, by - 1, 12, accent, PRIMARY_FONT_BOLD, PAGE_W - 120);
+      by += stateRowH;
+
+      // Webhook
+      safeText(card, "WEBHOOK", 24, by, 10, "#7A6058", PRIMARY_FONT_BOLD, 80);
+      safeText(card, a.webhook, 110, by - 1, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 140);
+      by += webhookRowH;
+
+      // Notes
+      safeText(card, "NOTES", 24, by, 10, "#7A6058", PRIMARY_FONT_BOLD, 60);
+      by += 18;
+      for (let j = 0; j < a.notes.length; j++) {
+        const dot = createRect(card, 24, by + 7, 5, 5, "#7A6058");
+        dot.cornerRadius = 2.5;
+        safeText(card, a.notes[j], 40, by, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 64);
+        by += noteRowH;
+      }
+
+      y += cardH + 16;
+    }
+    y += 24;
+  }
+
+  // 02 · Cross-cutting (2-col k/v)
+  y = sectionHeader(page, "02", "Cross-cutting · orchestrator · retries · admin", 0, y);
+  {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    const cardH = 130;
+    for (let i = 0; i < spec.crosscut.length; i++) {
+      const r = spec.crosscut[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(spec.crosscut.length / 2) * (cardH + 12) + 40;
+  }
+
+  // 03 · Tests
+  y = sectionHeader(page, "03", "Test surface · sandbox", 0, y);
+  {
+    const cardH = 56;
+    for (let i = 0; i < spec.tests.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT.purple);
+      const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+      box.cornerRadius = 4;
+      safeText(card, spec.tests[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 04 · Live-provider procurement decisions
+  y = sectionHeader(page, "04", "Live-provider decisions · procurement · legal · NOT code blockers", 0, y);
+  {
+    const cardH = 64;
+    for (let i = 0; i < spec.decisions.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT.warning);
+      safeText(card, spec.decisions[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase B4 exit checklist", 0, y);
+  {
+    const cardH = 56;
+    for (let i = 0; i < spec.exit.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT.teal);
+      const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+      box.cornerRadius = 4;
+      safeText(card, spec.exit[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      y += cardH + 8;
+    }
+  }
 }
 
 async function buildAccessibilityPage(page) {

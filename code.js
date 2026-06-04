@@ -25,6 +25,7 @@ const PAGE_ORDER = [
   "■ M3 — Home & eSIM",
   "■ M4 — Connect (VoIP & VPN)",
   "■ M5 — AI, Billing & Loyalty",
+  "■ M6 — Account, Notifications & System",
   "■ R1 — Testing, Observability & Handoff",
   "■ Prototype", "■ Handoff Notes"
 ];
@@ -2293,6 +2294,132 @@ const BACKEND_PAGES = [
     ],
   },
   {
+    name: "■ M6 — Account, Notifications & System",
+    kind: "m6",
+    kicker: "M6 · MOBILE · ACCOUNT + NOTIFICATIONS + SYSTEM STATES · 58–72 + G-02 + G-03 + G-04 + G-05 + G-06 + G-15 · LAST FLUTTER FEATURE PACK",
+    title: "Account · Notifications · System States · Figma 58–72",
+    subtitle: "Final Flutter feature pack. Wires Account tab (4th bottom-nav: Home/eSIM/Connect/Account) + push/in-app notifications + cross-cutting system states. Surfaces aggregate from M3 (eSIM) · M4 (Connect) · M5 (Billing/Loyalty/AI). System states hosted at app shell: G-02 no-internet · G-03 maintenance (driven by A17) · G-04 deep-link auth-aware · G-05 force-update · G-06 GDPR/PDPL re-consent · G-15 re-onboarding after major version. NO new product features — composes M2–M5 surfaces with profile · settings · security · legal · support · push handling.",
+    rules: [
+      { t: "warning", v: "M1 tokens / widgets only · light + dark + RTL everywhere · numbers/prices LTR in Arabic · Account is the 4th bottom-nav tab · NO new business logic — composes M2–M5 surfaces" },
+      { t: "warning", v: "Profile edits go through B3 · email/phone change requires re-verification (OTP) · password change requires current-password + step-up · biometric re-enroll on device change" },
+      { t: "warning", v: "Notifications respect platform permission state · iOS provisional vs explicit · Android 13+ POST_NOTIFICATIONS · GRACEFUL fallback when denied · NEVER nag" },
+      { t: "warning", v: "Push payloads NEVER carry secrets / full PII · server emits typed events · client fetches detail via API · deep-link routes auth-aware (G-04)" },
+      { t: "warning", v: "G-03 maintenance driven by admin A17 toggle · client polls or receives push · NEVER hardcoded · clear copy + ETA when known · read-only mode if partial" },
+      { t: "warning", v: "Account deletion preserves finance/audit records (B5/B8) per retention · soft-delete user · revoke ALL sessions · email confirmation · audit entry" },
+      { t: "purple",  v: "Haptics · setting toggle = light · destructive confirm = warning · success haptic on save · reduced-motion respects M1 baseline" },
+      { t: "teal",    v: "Legal pages (Terms · Privacy · Refund · VPN disclaimer) versioned · re-consent on bump (G-06) · per-language · counsel-reviewed · counsel owns content" },
+    ],
+    accountScreens: [
+      { t: "orange",  k: "58 · Account Home",          v: "Tab landing · profile card (avatar · name · email/phone masked) · subscription summary (from M5/51) · loyalty balance (from M5/54) · referral code link (M5/57) · sections: Profile · Security · Notifications · Connect · Billing · Legal · Support · Sign out" },
+      { t: "purple",  k: "59 · Profile",               v: "Edit name · avatar · language (en/ar) · region · email/phone change → OTP re-verify (B3) · save success haptic · validation per locale" },
+      { t: "warning", k: "60 · Security",              v: "2FA status + manage · biometric toggle · active sessions list (revoke per-device) · password change (current + step-up) · login alerts toggle · NEVER shows raw tokens" },
+      { t: "purple",  k: "61 · Connect Settings",      v: "VPN protocol preference (WireGuard default · OpenVPN fallback) · auto-connect rules · trusted networks list · kill-switch · split tunnel · VoIP DND hours · routes back to M4" },
+      { t: "purple",  k: "62 · Language & Region",     v: "Language switch en ↔ ar (Cairo for Arabic · DM Sans for English) · region · currency display preference (server-canonical · display only) · timezone · persisted" },
+      { t: "teal",    k: "63 · Legal & Privacy",       v: "Terms · Privacy · Refund · VPN disclaimer · all versioned · acceptance history visible · request data export (PDPL) · request deletion (G-15 path)" },
+      { t: "purple",  k: "64 · Support",               v: "FAQ · contact (in-app form → ticket A15) · email/WhatsApp fallback · device + app diagnostics attached (REDACTED — never tokens / PII / card data)" },
+      { t: "warning", k: "65 · Account Deletion",      v: "Multi-step confirm · explains finance/audit retention · reason capture · email-confirm link · soft-delete + revoke all sessions · audit entry · NEVER reversible past grace" },
+    ],
+    notificationScreens: [
+      { t: "purple",  k: "66 · Notifications Center",  v: "In-app inbox · grouped by category (Billing · Connect · Loyalty · System) · read/unread · cursor pagination · empty/loading/error · routes to source surface" },
+      { t: "purple",  k: "67 · Notification Preferences", v: "Per-category push + email + SMS toggles · channel + locale · quiet hours · marketing opt-in (per-market default per FL) · server-side persisted" },
+      { t: "warning", k: "68 · Push Permission Prime", v: "Pre-permission rationale before OS prompt · iOS provisional optional · Android 13+ POST_NOTIFICATIONS · NEVER nag if denied · re-prompt path via Settings deep link" },
+    ],
+    systemStateScreens: [
+      { t: "warning", k: "G-02 · No Internet",         v: "Detected at shell · banner overlay on active screen · cached read-only where possible · auto-clears on connectivity · primary CTA 'Retry'" },
+      { t: "warning", k: "G-03 · Maintenance",         v: "Driven by A17 admin toggle · full-screen on app open · partial banner if read-only · clear copy + ETA when known · NEVER hardcoded · respects locale" },
+      { t: "warning", k: "G-04 · Deep-link Auth-aware", v: "Cold-start deep link → if logged-out → onboarding/login → resume target · NEVER drops intent · session-aware re-auth preserves destination" },
+      { t: "warning", k: "G-05 · Force Update",        v: "Server returns min-version requirement · full-screen modal · 'Update' → store · NEVER bypassable · reduced-motion respected · per-platform store URL" },
+      { t: "warning", k: "G-06 · GDPR/PDPL Re-consent", v: "On policy version bump · modal on first app open · explains what changed · accept persists (versioned) · decline → restricted mode or sign-out per policy class" },
+      { t: "purple",  k: "G-15 · Re-onboarding",       v: "After major version with new permission/consent surface · light flow · only the deltas · NEVER full onboarding repeat · skip if not applicable" },
+    ],
+    pushEvents: [
+      { t: "orange",  k: "Billing events",             v: "Trial expiring (T-3 / T-1 / day-of) · payment failed · receipt available · subscription renewed · cancel confirmed · all from B5 webhook → push templates" },
+      { t: "purple",  k: "Connect events",             v: "VPN session ended unexpectedly · VoIP voicemail (if supported) · incoming call (V-02 via PushKit/FCM-priority) · captive portal cleared" },
+      { t: "purple",  k: "Loyalty events",             v: "Points earned (idempotent · ledger entry) · reward redeemed · referral approved (B6 · admin A13) · tier upgrade if any · NEVER manipulative cadence" },
+      { t: "purple",  k: "AI events",                  v: "Recommendation ready · saved-thread reply (if streaming async) · NEVER promotional from AI · respects category preferences" },
+      { t: "warning", k: "System events",              v: "Force-update available · maintenance scheduled (driven by A17) · region availability changed for user's market · re-consent required" },
+      { t: "teal",    k: "Auth events",                v: "New device login · password changed · 2FA changed · suspicious activity · session revoked elsewhere · always informational + actionable link" },
+    ],
+    integration: [
+      { t: "orange",  k: "B3 Account endpoints",       v: "GET /me · PATCH /me · POST /me/email-change · POST /me/phone-change · POST /me/password · GET /me/sessions · DELETE /me/sessions/:id · POST /me/delete" },
+      { t: "purple",  k: "Notification endpoints",     v: "GET /notifications · POST /notifications/:id/read · GET /notifications/preferences · PATCH /notifications/preferences · POST /devices (FCM/APNs token register)" },
+      { t: "warning", k: "System / config endpoints",  v: "GET /system/config (min-version · maintenance · regional_flags · policy versions) · polled at app open + every N minutes · push-bumped on critical change" },
+      { t: "teal",    k: "Repository layer",           v: "AccountRepository · NotificationRepository · SystemConfigRepository · DeviceRepository · all return Result<T,ApiError> · widgets switch on code · empty/loading/error from M1" },
+      { t: "warning", k: "Push platform integration",  v: "FCM (Android) + APNs (iOS) · PushKit separate channel for VoIP (M4) · token registered on login · revoked on logout · permission state persisted" },
+      { t: "purple",  k: "Deep-link handler",          v: "Universal Links (iOS) + App Links (Android) · routes to surface with auth gate · preserves intent through login · used by push payloads + email links" },
+    ],
+    tests: [
+      "Account home 58 · aggregates surface correctly from M5 (sub + loyalty + referral) · M3 (eSIMs count) · M4 (VPN/VoIP status) · NEVER hardcoded · reactive on change",
+      "Profile 59 · email/phone change requires OTP re-verify · save success haptic · validation per locale (Gulf phone formats)",
+      "Security 60 · 2FA enroll/disable · biometric toggle persists · session list shows current device · revoke per-device immediately invalidates server-side · password change requires step-up",
+      "Connect Settings 61 · VPN protocol pref persists · auto-connect rule applies on network change · trusted networks editable · kill-switch enforced",
+      "Language switch 62 · en ↔ ar live without restart · Cairo loads for Arabic · numbers stay LTR · region/timezone persisted",
+      "Legal 63 · all 4 docs versioned + render per language · acceptance history accurate · data export request fires PDPL flow · deletion request routes to 65",
+      "Support 64 · ticket creation routes to A15 · diagnostics attachment REDACTED (no tokens/PII/cards) · email/WhatsApp fallback opens correctly",
+      "Account deletion 65 · multi-step confirm · email-confirm link required · soft-delete preserves finance/audit · ALL sessions revoked immediately · audit entry written",
+      "Notifications inbox 66 · grouped by category · read/unread · cursor pagination · routes to source surface (e.g. billing event → 51)",
+      "Preferences 67 · per-category × per-channel toggles persist server-side · quiet hours respected · marketing opt-in default per FL per market",
+      "Push permission prime 68 · pre-permission rationale before OS prompt · NEVER nag if denied · Settings deep link path works",
+      "G-02 no-internet · banner overlay · cached read-only where possible · auto-clears on reconnect",
+      "G-03 maintenance · A17 toggle drives state · full-screen on cold open · partial banner when read-only · ETA copy when set",
+      "G-04 deep-link · cold-start → logged-out → login → resumes target · NEVER drops intent",
+      "G-05 force-update · min-version from system config · full-screen modal · NEVER bypassable · per-platform store URL",
+      "G-06 re-consent · policy version bump → modal on first open · explains what changed · accept persists versioned · decline → restricted mode",
+      "G-15 re-onboarding · major-version delta surfaces only new permission/consent steps · skips if not applicable",
+      "Push billing/connect/loyalty/AI/system/auth events · category preferences honored · payload carries NO secrets/PII · client fetches detail via API",
+      "Light + dark + RTL render every screen · banners mirror correctly · numbers LTR in Arabic · Cairo font correct",
+      "Account aggregate refresh · reactive (Riverpod invalidate / Bloc emit) after sub change · loyalty redeem · session revoke · NO stale UI",
+    ],
+    edgeCases: [
+      "Email/phone change race · OTP token expiry · partial change rolled back atomically · UI reflects authoritative state",
+      "Biometric device-key invalidation on OS reset · UI re-enroll flow · NEVER falls back to password silently",
+      "Session revoke from another device · current device receives push → forced re-auth on next privileged action",
+      "Push token rotation on app reinstall · old token cleaned up server-side · NEVER duplicate-deliver",
+      "Quiet hours across DST · timezone-aware · server canonical · client renders in user locale",
+      "Marketing opt-in default per FL · UAE/KSA may require explicit opt-in (PDPL) · GCC defaults differ · server enforces · UI reflects",
+      "Force-update min-version vs already-installed · user on-flight scenario · GRACEFUL retry post-update",
+      "Maintenance during active session · graceful read-only · in-flight payment treated as G-12 timeout (M3/M5 path)",
+      "Re-consent decline for non-essential policy change · restricted mode allows core auth/billing only · marketing/AI gated",
+      "Account deletion grace period · reversal window · how surfaced · email reminder cadence",
+      "Localization fallback · missing ar string → fall back to en (NEVER raw key) · mixed-script handling for names",
+      "Diagnostic attachment scope · what's safe to attach · scrubber unit-tested · NEVER tokens/cards/full PII",
+    ],
+    handoff: [
+      "R1 testing inherits stable Account/Notifications/System surfaces · 10 critical journeys reuse these · J10 (recovery) directly tests M6",
+      "B3 endpoints depended on · email/phone change · password change · session revoke · account deletion · all pre-existing from B3",
+      "B8 admin · A15 ticket creation · A16 notifications composer targets push categories defined here · A17 drives G-03 · alignment required",
+      "FL legal/PDPL · marketing default per market · re-consent triggers · counsel-reviewed copy per language · M6 renders only",
+      "Platform · iOS Universal Links · Android App Links · push entitlements · Settings deep-link API per OS version",
+      "G-15 re-onboarding lives at shell · M1 onboarding components reused · NEVER duplicates full flow",
+    ],
+    pending: [
+      "Account deletion grace-period length · per-market legal · reversal mechanics · email reminder cadence",
+      "Marketing opt-in defaults per market · UAE PDPL · KSA · Bahrain · Oman · counsel sign-off",
+      "Re-consent decline policy classes · what's blocking vs restricted-mode · per policy",
+      "Quiet hours UX · per-category override · DST handling · default window per locale",
+      "Diagnostic attachment scope · PII boundary · scrubber test corpus",
+      "Force-update threshold cadence · how aggressive · grace days vs hard-cut",
+      "Notification category taxonomy final · alignment with A16 admin composer · per-language strings",
+      "Trusted-networks UX (mirrors M4 pending) · battery cost vs always-on · whitelist vs auto-detect",
+    ],
+    exit: [
+      "Account tab 58–65 live · light/dark/RTL · M1 widgets only · aggregates from M2–M5 surfaces · NO new business logic",
+      "Profile email/phone change requires OTP re-verify · password change requires step-up · biometric re-enroll on device change",
+      "Security session list · revoke per-device immediate server-side · NEVER raw tokens shown",
+      "Connect Settings 61 surfaces VPN protocol/auto-connect/trusted-networks/kill-switch · routes back to M4 correctly",
+      "Language live-switch en ↔ ar · Cairo for Arabic · numbers LTR · timezone/region persisted",
+      "Legal 63 · 4 docs versioned · acceptance history · PDPL data export + deletion paths surfaced",
+      "Account deletion 65 · multi-step confirm · finance/audit retention preserved · all sessions revoked · audit entry",
+      "Notifications inbox 66 + preferences 67 + permission prime 68 live · per-category × per-channel toggles · NEVER nag",
+      "Push events for billing/connect/loyalty/AI/system/auth wired · payload carries NO secrets/PII · deep-link auth-aware",
+      "G-02 / G-03 / G-04 / G-05 / G-06 / G-15 hosted at shell · A17 drives G-03 · re-consent + force-update + re-onboarding tested",
+      "All endpoints wired through repository layer · empty/loading/error from M1 · reactive refresh after relevant actions",
+      "Light + dark + RTL across all screens · banners mirror correctly · numbers LTR in Arabic",
+      "Edge cases logged in Handoff · pending market/legal items NOT code blockers",
+      "M6 closes the Flutter feature pack · R1 inherits stable surfaces for the 10 critical journeys",
+    ],
+  },
+  {
     name: "■ R1 — Testing, Observability & Handoff",
     kind: "r1",
     kicker: "R1 · PRODUCTION READINESS · 10 E2E JOURNEYS · OBSERVABILITY · DEPLOY/OPS · HANDOFF · OPEN DECISIONS · GO/NO-GO",
@@ -2473,6 +2600,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "m3") return buildBackendM3Page(page, spec);
   if (spec.kind === "m4") return buildBackendM4Page(page, spec);
   if (spec.kind === "m5") return buildBackendM5Page(page, spec);
+  if (spec.kind === "m6") return buildBackendM6Page(page, spec);
   if (spec.kind === "r1") return buildBackendR1Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
@@ -4094,6 +4222,88 @@ async function buildBackendM5Page(page, spec) {
   fullRows(spec.pending, 64, "warning", false);
 
   y = sectionHeader(page, "Exit", "Phase M5 exit checklist · AI + Billing + Loyalty", 0, y);
+  fullRows(spec.exit, 56, "purple", true);
+}
+
+async function buildBackendM6Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.purple);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  y = sectionHeader(page, "00", "Non-negotiables · composes M2–M5 · OTP for sensitive change · push has no secrets · A17 drives G-03", 0, y);
+  rules2col(spec.rules, 110);
+
+  y = sectionHeader(page, "01", "Account · 58–65 · home · profile · security · connect · language · legal · support · deletion", 0, y);
+  kv2col(spec.accountScreens, 110);
+
+  y = sectionHeader(page, "02", "Notifications · 66–68 · inbox · preferences · permission prime", 0, y);
+  kv2col(spec.notificationScreens, 110);
+
+  y = sectionHeader(page, "03", "System states · G-02 · G-03 · G-04 · G-05 · G-06 · G-15 · all hosted at shell", 0, y);
+  kv2col(spec.systemStateScreens, 110);
+
+  y = sectionHeader(page, "04", "Push event taxonomy · billing · connect · loyalty · AI · system · auth", 0, y);
+  kv2col(spec.pushEvents, 110);
+
+  y = sectionHeader(page, "05", "Integration · B3 account · notification · system config · push · deep-link", 0, y);
+  kv2col(spec.integration, 110);
+
+  y = sectionHeader(page, "06", "Test surface · account · notifications · system states · push · localization · reactivity", 0, y);
+  fullRows(spec.tests, 56, "purple", true);
+
+  y = sectionHeader(page, "07", "Edge cases · permission · DST · re-consent · deletion grace · localization fallback", 0, y);
+  fullRows(spec.edgeCases, 64, "orange", false);
+
+  y = sectionHeader(page, "08", "Handoff to R1 · what testing inherits · platform / counsel items", 0, y);
+  fullRows(spec.handoff, 64, "teal", false);
+
+  y = sectionHeader(page, "09", "Pending · counsel / market / UX cadence · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  y = sectionHeader(page, "Exit", "Phase M6 exit checklist · Account · Notifications · System · closes Flutter feature pack", 0, y);
   fullRows(spec.exit, 56, "purple", true);
 }
 

@@ -19,6 +19,7 @@ const PAGE_ORDER = [
   "■ B6 — Loyalty & Referrals",
   "■ B7 — AI Advisor",
   "■ B8 — Admin Backend",
+  "■ W1 — Web Admin Frontend",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -1579,6 +1580,122 @@ const BACKEND_PAGES = [
       "Policy decisions logged in Handoff · NOT code blockers · sandbox build proceeds",
     ],
   },
+  {
+    name: "■ W1 — Web Admin Frontend",
+    kind: "w1",
+    kicker: "W1 · WEB ADMIN FRONTEND · REACT + TS + VITE · A00–A19 · FIRST CLIENT PHASE · STABLE NOT FLASHY",
+    title: "Web Admin Frontend · React + TS + Vite · against B8",
+    subtitle: "First client phase. Operations / finance console — must feel stable + trustworthy · NOT flashy. Generated client from B8 OpenAPI · RBAC-aware UI (server still enforces) · BrandGuide v2 tokens · 240px sidebar · 64px header · 24px content padding · white cards · 12px radius.",
+    rules: [
+      { t: "warning", v: "API client GENERATED from B8 OpenAPI · zero hand-written request/response models · regenerate on every contract change · no drift" },
+      { t: "warning", v: "UI is RBAC-aware · reads admin permissions · hides / disables actions the role can't perform · server still enforces every permission · NEVER show a control that would 403" },
+      { t: "warning", v: "Admin auth is SEPARATE realm · separate login + 2FA · idle-timeout + re-auth · tokens httpOnly where possible · refresh rotation respected" },
+      { t: "orange",  v: "Design tokens from BrandGuide v2 · same values used in Figma · do NOT re-pick colors · warm Gulf-first not generic SaaS blue · operations-tool clarity > decoration" },
+      { t: "orange",  v: "Money displayed from API integer-minor-units + currency · format per currency · NEVER reconstruct / recompute amounts client-side" },
+      { t: "warning", v: "Tables operational · server-side pagination + filter + sort wired to API · sortable columns · empty / loading / error state for EVERY list" },
+      { t: "warning", v: "Sensitive fields render MASKED exactly as API returns · last-4 / presence only · client never has · never requests · never logs full secrets" },
+      { t: "warning", v: "Destructive / financial actions use explicit confirmation step · surface audit trail · high-risk reflect server approval gate · 2-party where required" },
+    ],
+    architecture: [
+      { t: "orange",  k: "Vite + React + TS",        v: "Vite dev/build · React 18 · strict TS · path aliases · Tailwind v4 tokens map to BrandGuide v2 CSS variables" },
+      { t: "orange",  k: "Generated client",         v: "openapi-typescript or orval against B8 OpenAPI · types + fetcher generated · pnpm script 'gen:api' on contract change · zero hand-written DTOs" },
+      { t: "warning", k: "Auth + RBAC store",        v: "Zustand or Redux Toolkit slice · admin identity + permissions[] + token state · permission helper hook usePermission(name) drives UI gating" },
+      { t: "teal",    k: "Routing",                  v: "React Router v6 · permission-gated routes · 401 redirects to A00 · 403 friendly screen (control should not have been shown)" },
+      { t: "purple",  k: "Data fetching",            v: "TanStack Query · server-state cache · pagination + filter + sort encoded in query keys · auto-refetch on focus optional · errors surface to error boundary" },
+      { t: "warning", k: "Error envelope handling",  v: "Centralized interceptor maps B0 { error: { code, message, details } } → typed UI · 401 re-auth · 403 friendly · 422 inline form errors · 5xx toast + error boundary" },
+      { t: "purple",  k: "Forms",                    v: "react-hook-form 7.55.0 + zod schemas mirroring API DTOs · server validation merged into form errors via details[]" },
+      { t: "teal",    k: "Tokens / theme",           v: "BrandGuide v2 CSS vars · roam-orange · roam-teal · roam-purple · warning · semantic colors · no inline hex anywhere in components" },
+    ],
+    shell: [
+      { t: "warning", k: "App layout",        v: "240px left sidebar · 64px top header · 24px content padding · white cards · 12px radius · subtle shadow · grouped nav: Operations / Product / Commerce / Finance / System" },
+      { t: "warning", k: "Top header",        v: "Admin identity (avatar + name + role) · environment indicator (dev / staging / live) · prominent in non-prod · global search · logout" },
+      { t: "warning", k: "Auth flow",         v: "A00 login → 2FA challenge → token store · protected route wrapper · idle-lock 15 min default · refresh rotation handled by client · re-auth modal preserves route" },
+      { t: "purple",  k: "Permission-gated nav", v: "Each nav item declares required permission · usePermission hides item if missing · same gate on the route · belt-and-braces" },
+      { t: "orange",  k: "Environment banner", v: "Non-prod environments show top banner · sandbox / staging colored · prevents 'wait was that prod' moments" },
+    ],
+    primitives: [
+      { t: "orange",  k: "DataTable",             v: "Server-side pagination / filter / sort · column definitions · sortable headers · empty / loading / error states · row actions gated by permission · cursor pagination per B2" },
+      { t: "orange",  k: "ConfirmModal",          v: "Destructive actions · summary of consequences · type-to-confirm for high-risk · attached audit message field where required" },
+      { t: "warning", k: "AuditTrailViewer",      v: "Inline component · shows audit_log entries for entity · before/after diff · admin identity · timestamp in admin locale (UTC stored)" },
+      { t: "purple",  k: "MaskedField",           v: "Renders last-4 / presence dot · copy disabled · NEVER tries to fetch full · companion edit modal POSTs write-only" },
+      { t: "teal",    k: "MoneyDisplay",          v: "Formats integer minor + currency per Intl.NumberFormat · respects locale · never recomputes · 'AED 12.50' style" },
+      { t: "teal",    k: "DateTimeDisplay",       v: "UTC stored · rendered in admin locale · tooltip shows UTC + relative · timezone consistent across screens" },
+      { t: "purple",  k: "FormField + ErrorList", v: "react-hook-form integration · server details[] flow back into per-field errors · zod schema is the source of truth" },
+      { t: "warning", k: "ErrorBoundary + Toast", v: "Top-level boundary · per-route boundary · toast for transient · banner for blocking · all errors surface error envelope code" },
+    ],
+    screensOps: [
+      { t: "purple",  k: "A01 · Dashboard",          v: "KPI cards + charts (recharts) from real aggregates · cached · read-only · permission: admin.dashboard.view · responsive grid" },
+      { t: "purple",  k: "A02 · Users List",         v: "DataTable · filter (status · region · joined-after) · server pagination · row → A03 · permission: admin.users.list" },
+      { t: "warning", k: "A03 · User Detail",        v: "Tabs: profile · orders · eSIMs · numbers · subscriptions · loyalty ledger · sessions · PII view is an AUDITED call · actions: suspend · revoke session · trigger pwd reset · permission: admin.users.read.pii" },
+      { t: "orange",  k: "A15 · Support Tickets",    v: "List · assign · respond · status lifecycle · timeline view · permission: admin.support.handle" },
+      { t: "orange",  k: "A16 · Notifications Ctr.", v: "Compose · target by segment · schedule · preview · permission: admin.notifications.send · routes through B4 push/sms" },
+    ],
+    screensProduct: [
+      { t: "teal",    k: "A04 · eSIM Orders",        v: "Provisioning state · filter · re-provision (audited) · refund (audited · approval gate) · drill into order detail · permission: admin.esim.manage" },
+      { t: "teal",    k: "A05 · VoIP Numbers",       v: "Inventory · lifecycle reserved → active → released · release with audit · permission: admin.voip.manage" },
+      { t: "teal",    k: "A06 · VPN Sessions",       v: "Active + historical · server load chart · permission: admin.vpn.read" },
+      { t: "warning", k: "A11 · VPN Server Mgmt",    v: "Add / enable / disable servers · capacity · credentials MASKED · write-only edit · permission: admin.vpn.manage" },
+      { t: "warning", k: "A10 · Provider Config",    v: "MOST-GATED screen · adapters enable/disable · sandbox/live toggle · credentials WRITE-ONLY + masked · permission: admin.providers.manage · super-admin in practice" },
+    ],
+    screensCommerce: [
+      { t: "orange",  k: "A08 · Subscription Plans", v: "Plan CRUD · regional availability · permission: admin.catalog.manage · price-change goes through A09" },
+      { t: "warning", k: "A09 · Pricing Management", v: "Versioned changes · before/after diff in confirm modal · per-market tax + regional_flags from FL D3 · effective_from picker · permission: admin.pricing.manage" },
+      { t: "purple",  k: "A12 · Loyalty & Points",   v: "Ledger view (table) · manual adjustment with reason (audited) · earn/redeem config (versioned PATCH) · permission: admin.loyalty.manage" },
+      { t: "purple",  k: "A13 · Referral Program",   v: "Flagged referrals review queue · approve/reject (writes ledger via B6) · config · permission: admin.referrals.manage" },
+      { t: "purple",  k: "A14 · Marketing Campaigns", v: "Compose · target · schedule · status · permission: admin.marketing.manage" },
+    ],
+    screensFinance: [
+      { t: "orange",  k: "A07 · Revenue Analytics",      v: "Aggregates by product · market · period · charts (recharts) · reconcile to ledger · permission: admin.finance.view" },
+      { t: "warning", k: "A19 · Revenue Reconciliation", v: "Finance-GRADE · NOT marketing dashboard · B5 reconciliation_flags table · drill-down to payment / refund · resolve-with-audit · ledger UNCHANGED · permission: admin.finance.reconcile" },
+      { t: "warning", k: "A17 · App Settings",           v: "Feature flags · regional_flags toggles · maintenance_mode (drives client G-03) · audited · permission: admin.settings.manage" },
+      { t: "warning", k: "A18 · Admin Users",            v: "CRUD admins · assign roles · role/permission matrix view · permission: admin.users.manage · super-admin gates role create" },
+    ],
+    crossCutting: [
+      "Centralized API error handling · maps B0 envelope to UI · 401 → re-auth modal · 403 → friendly 'not permitted' · 409 APPROVAL_REQUIRED → two-party prompt · 422 → inline form errors · 5xx → error boundary",
+      "Accessibility · keyboard-navigable tables + forms · focus management in modals · WCAG AA contrast · daily-use tool · usability > decoration",
+      "Responsiveness · desktop-first 1440px · tablet 768px adaptations from Figma · tables degrade gracefully · sidebar collapses on tablet",
+      "Locale + timezone · admin locale for dates / numbers · UTC stored · 24h time · multi-currency labels honored on money columns",
+      "Telemetry · request_id from B0 forwarded · correlation in error toasts (Reference: req_xxx) · helps support diagnose without server access",
+    ],
+    tests: [
+      "Generated client compiles · regenerating against B8 OpenAPI produces zero diff against committed types when contract unchanged",
+      "RBAC nav · admin without admin.refund.issue does NOT see refund button · same admin still 403s if URL hand-typed (server enforces)",
+      "Permission-gated route · navigating to A09 without admin.pricing.manage → friendly forbidden screen · NOT raw 403",
+      "Auth flow · A00 → 2FA challenge → admin shell · idle 15 min → lock screen · re-auth preserves route",
+      "Error envelope · 422 with details[] flows into per-field form errors via zod schema mapping",
+      "Money formatting · API returns { amount: 1250n, currency: 'AED' } → 'AED 12.50' · never reconstructed · multi-currency users see correct symbol",
+      "Masked field · MaskedField renders presence dot for empty · last-4 for present · no API call exists to fetch full",
+      "Confirm modal · refund > threshold surfaces APPROVAL_REQUIRED → second-approver picker · two-party path completes",
+      "Pricing change · diff before/after in confirm modal · effective_from picker · audit row visible in AuditTrailViewer immediately",
+      "Reconciliation drill-down · flagged item → linked payment + provider event · resolve-with-audit writes audit · underlying ledger UNTOUCHED in UI state",
+      "DataTable · server pagination + filter + sort encoded in URL query · refresh preserves state · empty state shown when zero rows",
+      "Environment banner · staging / sandbox banners visible · prod has none · prevents accidental destructive action in wrong env",
+      "Accessibility · keyboard tab order across DataTable · focus trap in ConfirmModal · screen reader announces toast",
+    ],
+    pending: [
+      "Default landing per role · finance → A07 · ops → A04 · support → A15 · super-admin → A01 · ops sign-off",
+      "Which columns / filters matter most operationally · per-screen review with the team that lives in it daily",
+      "Export governance · which exports allowed · row caps · purpose-of-use prompt · audit row written · per regional law",
+      "Idle-lock window · 15 min default vs 5 min for finance roles · re-auth UX · 2FA on re-auth or password only",
+      "Locale defaults · Arabic + English support · RTL pass on tables + sidebar · timezone default per admin",
+      "Performance / caching pass · A07 + A19 aggregates may need server-side cache + cache-busting on data change",
+      "Endpoints whose final shape is still settling · revenue analytics group-by · reconciliation drill-down payload · marketing segment query DSL",
+    ],
+    exit: [
+      "Generated client wired · pnpm gen:api regenerates from B8 OpenAPI · zero hand-written DTOs",
+      "App shell live · sidebar + header + auth flow + RBAC routing + idle-lock + env banner",
+      "Shared primitives · DataTable · ConfirmModal · AuditTrailViewer · MaskedField · MoneyDisplay · DateTimeDisplay · FormField · all reused across screens",
+      "All A00–A19 screens implemented · loading + empty + error state on every list · permission-gated · audit visible where mutating",
+      "Money formatting from API integer-minor + currency · zero client-side recomputation",
+      "Sensitive fields masked · write-only edit paths · client never holds full secrets",
+      "Destructive actions confirmed · approval-threshold prompt for high-risk · two-party path tested",
+      "Pricing changes versioned in UI · before/after diff in confirm modal · effective_from picker",
+      "Reconciliation finance-GRADE · drill + resolve-with-audit · ledger view-only",
+      "Accessibility AA · keyboard navigable · focus management in modals · contrast verified",
+      "Responsive · 1440px desktop + 768px tablet adaptations green",
+      "Ops decisions logged in Handoff · NOT code blockers · default landings + column priorities + export governance pending sign-off",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -1616,6 +1733,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "b6") return buildBackendB6Page(page, spec);
   if (spec.kind === "b7") return buildBackendB7Page(page, spec);
   if (spec.kind === "b8") return buildBackendB8Page(page, spec);
+  if (spec.kind === "w1") return buildBackendW1Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -2681,6 +2799,103 @@ async function buildBackendB8Page(page, spec) {
 
   // Exit
   y = sectionHeader(page, "Exit", "Phase B8 exit checklist · last backend phase", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildBackendW1Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 00 · Non-negotiables
+  y = sectionHeader(page, "00", "Non-negotiables · generated client · RBAC-aware · separate auth · masking", 0, y);
+  rules2col(spec.rules, 110);
+
+  // 01 · Architecture
+  y = sectionHeader(page, "01", "Architecture · stack · client gen · auth · routing · data fetching", 0, y);
+  kv2col(spec.architecture, 110);
+
+  // 02 · Shell
+  y = sectionHeader(page, "02", "App shell · layout · header · auth flow · permission-gated nav · env banner", 0, y);
+  kv2col(spec.shell, 130);
+
+  // 03 · Primitives
+  y = sectionHeader(page, "03", "Shared primitives · reused across all A00–A19", 0, y);
+  kv2col(spec.primitives, 110);
+
+  // 04 · Screens · Operations
+  y = sectionHeader(page, "04", "Screens · Operations · A01 / A02 / A03 / A15 / A16", 0, y);
+  kv2col(spec.screensOps, 110);
+
+  // 05 · Screens · Product
+  y = sectionHeader(page, "05", "Screens · Product · A04 / A05 / A06 / A11 / A10", 0, y);
+  kv2col(spec.screensProduct, 110);
+
+  // 06 · Screens · Commerce
+  y = sectionHeader(page, "06", "Screens · Commerce · A08 / A09 / A12 / A13 / A14", 0, y);
+  kv2col(spec.screensCommerce, 110);
+
+  // 07 · Screens · Finance + System
+  y = sectionHeader(page, "07", "Screens · Finance + System · A07 / A19 / A17 / A18", 0, y);
+  kv2col(spec.screensFinance, 110);
+
+  // 08 · Cross-cutting
+  y = sectionHeader(page, "08", "Cross-cutting · errors · accessibility · responsive · locale · telemetry", 0, y);
+  fullRows(spec.crossCutting, 64, "orange", false);
+
+  // 09 · Tests
+  y = sectionHeader(page, "09", "Test surface · client gen · RBAC · auth · errors · money · masking · reconciliation", 0, y);
+  fullRows(spec.tests, 56, "purple", true);
+
+  // 10 · Pending
+  y = sectionHeader(page, "10", "Pending · ops sign-off · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase W1 exit checklist · first client phase", 0, y);
   fullRows(spec.exit, 56, "teal", true);
 }
 

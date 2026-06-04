@@ -16,6 +16,7 @@ const PAGE_ORDER = [
   "■ B4 — Provider Adapters",
   "■ B5 — Billing & 3DS",
   "■ FL — Finance & Legal",
+  "■ B6 — Loyalty & Referrals",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -1269,6 +1270,89 @@ const BACKEND_PAGES = [
       "FL output is config + decisions · NOT code · sandbox build proceeds without these blocking",
     ],
   },
+  {
+    name: "■ B6 — Loyalty & Referrals",
+    kind: "b6",
+    kicker: "B6 · BACKEND · LOYALTY & REFERRALS · APPEND-ONLY LEDGER · EVENT-DRIVEN EARN · ANTI-ABUSE",
+    title: "Loyalty & Referrals · append-only ledger",
+    subtitle: "Maps to 54–57 (loyalty dashboard · how-to-earn · redeem · referral). Depends on B5 events for earning. Points are a financial liability · balance = SUM(points_ledger) · earn is server-side from events · redeem is concurrency-safe · referrals are server-attributed + abuse-checked.",
+    rules: [
+      { t: "warning", v: "Points are an APPEND-ONLY LEDGER · points_ledger never mutated · balance = SUM of signed entries · no balance column anywhere" },
+      { t: "warning", v: "Earning is event-driven · payment_succeeded · subscription_renewed · referral_completed · client can NEVER assert 'give me points'" },
+      { t: "warning", v: "Point value is config · points-per-currency-unit · multipliers · never hardcoded · economics change without redeploy" },
+      { t: "warning", v: "Earn + redeem are idempotent against source event · replayed webhook MUST NOT double-award · unique on (event_id, kind)" },
+      { t: "orange",  v: "Treat points as financial liability · every balance reconciles to the ledger · bulk / admin adjustments audited · reviewed alongside B5 reconciliation (A19)" },
+      { t: "purple",  v: "No casino patterns · no artificial urgency · no dark patterns in API responses that the client would surface (per Figma design intent)" },
+      { t: "teal",    v: "Earn rules versioned · ledger entry references the rule version in effect at time of earning · historical entries stay accurate after rule change" },
+      { t: "warning", v: "Concurrent redemption never overspends · transaction + balance recheck inside the write · pessimistic lock or serializable isolation per Postgres setup" },
+    ],
+    flows: [
+      { t: "orange",  k: "F1 · Earn from purchase (B5 event)", v: "B5 emits payment_succeeded → loyalty subscriber resolves rule version + multipliers from config → writes positive ledger entry · ref = order_id · idempotency on (event_id, kind=earn_purchase)" },
+      { t: "orange",  k: "F2 · Earn from subscription renewal", v: "B5 emits subscription_renewed → ledger entry per renewal · ref = subscription_id + period · first-purchase / tier bonus rules apply per config" },
+      { t: "purple",  k: "F3 · Earn from referral completion", v: "Referral completed event (F7) → ledger entries for BOTH referrer + referee per config · ref = referral_id · idempotent on referral_id" },
+      { t: "warning", k: "F4 · Redeem (screen 56)", v: "POST /loyalty/redeem (idem) → tx: SUM(ledger) ≥ cost recheck → write negative ledger + redemption row → emit entitlement (B5 quote discount or account credit) · concurrent attempts → second fails not overspends" },
+      { t: "teal",    k: "F5 · Quote-time application (B5 25)", v: "Applied reward reduces screen-25 total SERVER-SIDE · client-sent discount ignored · entitlement validated against redemption row · single-use enforced" },
+      { t: "warning", k: "F6 · Expiry (scheduled, off by default)", v: "Job scans aged positive entries · writes NEGATIVE entry with reason=expiry · fully traceable · configurable per-rule · disabled until policy set" },
+      { t: "purple",  k: "F7 · Referral attribution + anti-abuse", v: "Referee uses code → referral pending → on first paid purchase → qualified → checks (self · device · payment instrument · velocity) → completed OR flagged for B8 admin · never silent reward" },
+      { t: "orange",  k: "F8 · Admin manual adjustment", v: "B8 admin writes audited ledger entry · reason required · adjustment_id ref · audit row · admin role gated · never UI-direct balance edit" },
+    ],
+    tables: [
+      { t: "warning", k: "points_ledger (append-only)", v: "id · user_id · delta (signed BigInt) · reason enum · source_kind · source_id · rule_version · created_at · UNIQUE (source_kind, source_id) for idempotency · NEVER UPDATE" },
+      { t: "orange",  k: "redemptions", v: "id · user_id · reward_id · point_cost · status · entitlement_ref · created_at · idempotency_key UNIQUE · drives ledger negative entry" },
+      { t: "orange",  k: "rewards (config-backed)", v: "id · kind (discount_next_purchase | account_credit | free_topup) · point_cost · value (minor + currency) · active flag · region availability" },
+      { t: "purple",  k: "referrals", v: "id · referrer_id · referee_id · code · status (pending | qualified | completed | flagged | rejected) · qualified_at · completed_at · flag_reasons[]" },
+      { t: "purple",  k: "referral_codes", v: "code · user_id · created_at · UNIQUE · public-shareable · deterministic per user (or rotateable)" },
+      { t: "teal",    k: "earn_rules (versioned)", v: "version · effective_from · points_per_currency · per-product multipliers · first-purchase bonus · tier bonuses · ledger entries reference version" },
+      { t: "teal",    k: "tiers (computed, optional)", v: "Computed from trailing spend / points · NOT a frozen flag · stored as derivation rule · re-evaluated on read" },
+      { t: "warning", k: "loyalty_audit", v: "Admin adjustments · reason · admin_id · before/after balance computed at write · queryable by user_id" },
+    ],
+    endpoints: [
+      "GET    /loyalty/dashboard          · computed balance · recent ledger · current tier (if any) · how-to-earn rendered from live config",
+      "GET    /loyalty/ledger?cursor=     · paginated ledger entries · cursor pagination per B2",
+      "GET    /loyalty/rewards            · active rewards catalog · region-filtered · point cost + value (minor + currency)",
+      "POST   /loyalty/redeem             · Idempotency-Key required · validates balance + writes negative entry in tx · returns entitlement",
+      "GET    /referrals/me               · user's referral code · share payload (text + link · client owns share sheet)",
+      "GET    /referrals                  · list of referrals · status · qualified_at · completed_at",
+      "POST   /referrals/apply            · referee submits code · pending row created · single-use per referee enforced",
+      "POST   /admin/loyalty/adjust       · audited manual adjustment · reason required · admin role · B8 UI",
+      "GET    /admin/loyalty/users/:id    · user ledger + flagged referrals · admin role",
+      "GET    /admin/loyalty/config       · read earn / redeem / referral config · PATCH updates produce new rule version",
+    ],
+    tests: [
+      "Balance = SUM(points_ledger) · arbitrary entry sequence · computed balance matches expected total exactly",
+      "Idempotent earn · payment_succeeded webhook replayed → second insert rejected on UNIQUE (source_kind, source_id) · single ledger entry",
+      "Idempotent redeem · same Idempotency-Key replayed → no double-spend · second response mirrors first",
+      "Concurrent redemption · two parallel redeems for last available points → exactly one succeeds · the other 409 INSUFFICIENT_BALANCE",
+      "Quote-time discount · client-sent discount ignored · only redemption row entitlement reduces server-computed total",
+      "Referral self-prevention · referee.id == referrer.id → 400 SELF_REFERRAL · no row created",
+      "Referral duplicate prevention · referee already has a pending/completed referral → 409 ALREADY_REFERRED",
+      "Flagged referral does NOT auto-pay · same-device / payment-instrument heuristic trips → status=flagged · zero ledger entry · admin review required",
+      "Expiry job correctness · aged entries within window expire → negative entry written · balance reduces by exact expiring amount · idempotent re-run",
+      "Rule version pinning · ledger entry written under v1 keeps v1 · rules upgraded to v2 mid-test · historical balance unchanged",
+      "Admin adjustment audit · adjust writes ledger + audit row · audit references admin_id + reason · ledger entry source_kind=adjustment",
+    ],
+    pending: [
+      "Point value / economics · points-per-AED · per-product multipliers · first-purchase bonus · CFO + product sign-off · liability sizing",
+      "Expiry policy · whether to expire · window (12 / 18 / 24 mo) · grace notification cadence · OFF by default until decided",
+      "Referral reward amounts + qualification rule · referrer + referee splits · qualifies on first paid purchase or first activated eSIM · KSA/UAE consumer-protection check on language",
+      "Tier structure (if any) · trailing-spend windows · perks · shown on screen 54 · or skip tiers entirely for v1",
+      "Anti-abuse heuristics signal weights · device fingerprint · payment instrument · velocity · false-positive rate vs reward leakage tradeoff",
+      "Reward catalog · which redemptions launch · discount-on-next-purchase vs account credit vs free top-up · per-region availability",
+    ],
+    exit: [
+      "points_ledger live · append-only · UNIQUE on (source_kind, source_id) · balance = SUM verified by tests",
+      "Earn subscribers wired to B5 · payment_succeeded · subscription_renewed · referral_completed · all idempotent",
+      "Redemption transaction safe · concurrent redeems never overspend · entitlement applies at B5 quote time",
+      "Referral lifecycle green · pending → qualified → completed · self / duplicate / flagged paths covered",
+      "Anti-abuse heuristics in place · flagged referrals route to B8 admin · never auto-pay",
+      "Earn rules versioned · ledger references version · historical entries stay correct after config change",
+      "Expiry job exists but DISABLED until policy decided · negative-entry mechanism tested in sandbox",
+      "Admin endpoints · audited adjustment · ledger view · flagged referral review · config read/update",
+      "OpenAPI updated · loyalty + referrals endpoints documented · ledger entry schema referenced",
+      "Liability dashboard · total outstanding points × value visible to finance · feeds A19 reconciliation",
+      "Business decisions logged in Handoff · NOT code blockers · sandbox build proceeds with placeholder economics",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -1303,6 +1387,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "b4") return buildBackendB4Page(page, spec);
   if (spec.kind === "b5") return buildBackendB5Page(page, spec);
   if (spec.kind === "fl") return buildBackendFLPage(page, spec);
+  if (spec.kind === "b6") return buildBackendB6Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -2078,6 +2163,100 @@ async function buildBackendFLPage(page, spec) {
 
   // Exit
   y = sectionHeader(page, "Exit", "Phase FL exit checklist", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildBackendB6Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+  function endpointsBlock(items, cardH) {
+    for (let i = 0; i < items.length; i++) {
+      const line = items[i];
+      const m = line.match(/^(GET|POST|PATCH|PUT|DELETE)\s+(\S+)\s+·\s+(.*)$/);
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT.teal);
+      if (m) {
+        const tone = METHOD_TONE[m[1]] || ACCENT.teal;
+        safeText(card, m[1], 24, 18, 12, tone, PRIMARY_FONT_BOLD, 80);
+        safeText(card, m[2], 110, 18, 12, "#1C0804", PRIMARY_FONT_BOLD, 380);
+        safeText(card, m[3], 500, 18, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 524);
+      } else {
+        safeText(card, line, 24, 18, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 00 · Non-negotiables
+  y = sectionHeader(page, "00", "Non-negotiables · ledger model · event-driven · liability mindset", 0, y);
+  rules2col(spec.rules, 110);
+
+  // 01 · Flows
+  y = sectionHeader(page, "01", "Flows · earn · redeem · referral · expiry · admin", 0, y);
+  kv2col(spec.flows, 130);
+
+  // 02 · Tables
+  y = sectionHeader(page, "02", "Tables · append-only ledger + redemptions + referrals + versioned rules", 0, y);
+  kv2col(spec.tables, 110);
+
+  // 03 · Endpoints
+  y = sectionHeader(page, "03", "Endpoints · loyalty + referrals + admin", 0, y);
+  endpointsBlock(spec.endpoints, 56);
+
+  // 04 · Tests
+  y = sectionHeader(page, "04", "Test surface · ledger correctness · idempotency · concurrency · anti-abuse", 0, y);
+  fullRows(spec.tests, 56, "purple", true);
+
+  // 05 · Pending business decisions
+  y = sectionHeader(page, "05", "Pending · business / finance decisions · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase B6 exit checklist", 0, y);
   fullRows(spec.exit, 56, "teal", true);
 }
 

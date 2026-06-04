@@ -23,6 +23,7 @@ const PAGE_ORDER = [
   "■ M1 — Flutter Foundation",
   "■ M2 — Onboarding & Auth",
   "■ M3 — Home & eSIM",
+  "■ M4 — Connect (VoIP & VPN)",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -2046,6 +2047,128 @@ const BACKEND_PAGES = [
       "Edge cases logged in Handoff · NOT blockers · M4 Connect inherits stable purchase flow",
     ],
   },
+  {
+    name: "■ M4 — Connect (VoIP & VPN)",
+    kind: "m4",
+    kicker: "M4 · MOBILE · CONNECT · VOIP + VPN · 31–43 + V-01/V-02 + G-07 + G-10 + G-11 + G-13 · ONE TAB TWO SERVICES",
+    title: "Connect · VoIP + VPN · Figma 31–43 + V-01/V-02",
+    subtitle: "Connect is ONE bottom-nav tab merging VoIP + VPN · shared IA · NOT two unrelated apps. Reuses M3 purchase flow (quote → PSP → 3DS → success). Teal = VPN/security per brand role. G-07 legal disclaimer gates VPN first activation · G-10 captive portal · G-11 reconnecting · G-13 call-quality inline · region gating strict per FL.",
+    rules: [
+      { t: "warning", v: "M1 tokens / widgets only · light + dark + RTL everywhere · numbers/prices LTR in Arabic · TEAL is VPN/security color per brand role separation" },
+      { t: "warning", v: "Connect is ONE area · shared IA + navigation across VoIP + VPN even though distinct services · do NOT make them feel like two unrelated apps" },
+      { t: "warning", v: "Region gating STRICT · regional_flags.voip_enabled / vpn_enabled · disabled markets get typed refusal from API · NEVER start-then-fail · graceful 'not available here'" },
+      { t: "warning", v: "VPN first activation requires G-07 legal disclaimer acceptance · persisted via API (versioned) BEFORE config issued per B4 · no acceptance → no connect · enforcement is server-side too" },
+      { t: "warning", v: "Number purchase reuses M3 external-PSP flow · quote → PSP → 3DS → success · idempotent · KYC requirement surfaced from API not hardcoded · varies per country" },
+      { t: "warning", v: "VPN/VoIP credentials + server keys NEVER in logs · NEVER in insecure storage · app holds only what API issues for the session · session-bound · rotated on reconnect" },
+      { t: "purple",  v: "Haptics · VPN connected = HEAVY impact · primary tap = light · reduced-motion alternative for VPN connecting ring + any pulse animation" },
+      { t: "teal",    v: "Platform VPN APIs (iOS Network Extension / Android VpnService) behind clean Dart interface · platform calling stack (CallKit / ConnectionService) for VoIP · entitlements flagged in Handoff" },
+    ],
+    voipScreens: [
+      { t: "orange",  k: "31 · VoIP Empty",         v: "No number · conversion-oriented · 'Get a virtual number' primary CTA → 33 browse · explains use cases (travel · business · privacy)" },
+      { t: "orange",  k: "32 · VoIP Filled",        v: "Active number card · quick actions (dial · history · settings) · status badge · usage summary · routes to 38 dialer / 37 history" },
+      { t: "purple",  k: "33 · Browse Numbers",     v: "From VoIP catalog (B4) · filter by country / area-code · regional gating respected · price (server-formatted) · cursor pagination" },
+      { t: "purple",  k: "34 · Number Detail",      v: "Capabilities (SMS · voice · fax) · monthly cost · KYC requirement surfaced if any · 'Buy' routes to 35 (or KYC step first)" },
+      { t: "warning", k: "35 · Purchase Review",    v: "Reuses M3 purchase flow (25 → 26 → S-07 → 27 path) · KYC fields appended where required · same Idempotency-Key · G-08 inline" },
+      { t: "purple",  k: "36 · Purchase Success",   v: "Success haptic · routes to 32 filled · number provisioned via B4 reservation→active · usable immediately · receipt available" },
+      { t: "teal",    k: "37 · Call History",       v: "CDRs from B4 · inbound + outbound · duration · cost (minor + currency) · cursor pagination · empty/loading/error states" },
+      { t: "orange",  k: "38 · In-App Dialer",      v: "Number pad · contact picker · paste-aware · recent · routes to V-01 active call · platform CallKit / ConnectionService integration" },
+    ],
+    voipCalls: [
+      { t: "warning", k: "V-01 · Active Call",      v: "Mute · keypad · speaker · hold · end · timer · G-13 call-quality warning INLINE banner when quality degrades · NOT separate page · CallKit/ConnectionService UI integration" },
+      { t: "warning", k: "V-02 · Incoming Call",    v: "Overlay-like full-screen experience · accept / decline · CallKit on iOS surfaces system UI · ConnectionService on Android · respects DND · push-driven (B4 push)" },
+    ],
+    vpnScreens: [
+      { t: "teal",    k: "39 · VPN Disconnected",   v: "Clear protection status · 'Not protected' · large CTA 'Connect' · shows last server / region · token-driven teal accent" },
+      { t: "teal",    k: "40 · VPN Connecting",     v: "Ring animation (teal) · reduced-motion alternative (cross-fade) · cancel option · platform handshake state surfaced · timeout → graceful retry" },
+      { t: "warning", k: "41 · VPN Connected",      v: "HEAVY haptic on connect · clear 'Protected' state · server name + flag · throughput live · IP shown · disconnect CTA · time-connected counter" },
+      { t: "teal",    k: "42 · Server List",        v: "From B4 · region grouped · load indicator (low/med/high) · ping (optional) · favorites · recently used · search · routes back to 39 with selection" },
+      { t: "purple",  k: "43 · VPN Settings",       v: "Auto-connect toggle · Trusted networks · Kill switch · Protocol selector (WireGuard default) · Split tunnel (if supported) · usage stats" },
+    ],
+    activationFlow: [
+      { t: "warning", k: "G-07 · VPN Legal Disclaimer", v: "First activation only · persisted via /consents (version + timestamp) BEFORE B4 issues config · refusal blocks VPN entirely · per-market language (UAE / KSA legality)" },
+      { t: "warning", k: "Config issuance",              v: "POST /vpn/configs · B4 returns WireGuard config or credentials · session-bound · NEVER stored in plain prefs · feeds platform VPN API · session_id tracked" },
+      { t: "warning", k: "Tunnel lifecycle",             v: "Platform VPN API · iOS NEPacketTunnelProvider · Android VpnService · Dart interface wraps · connect → established → disconnect · errors surface to UI" },
+      { t: "purple",  k: "Reconnect on network change",  v: "WiFi → cellular → reconnect via G-11 banner · session_id resumes where possible · new config if expired · NEVER silently drops protection" },
+    ],
+    contextualBanners: [
+      { t: "warning", k: "G-10 · Captive Portal",        v: "Detected (hotel wifi etc.) · banner overlay on active screen · NOT separate page · clear action 'Open portal' · WebView fallback · auto-dismisses on connectivity restored" },
+      { t: "warning", k: "G-11 · VPN Reconnecting",      v: "Live banner during reconnection · NOT separate page · spinner + 'Reconnecting...' + manual retry · auto-clears on connected · attaches at shell over feature screens" },
+      { t: "warning", k: "G-13 · Call-Quality Warning",  v: "Inline banner on V-01 active call · ONLY when quality degrades (jitter / packet loss / low bitrate threshold) · NOT separate page · suggests switching to VPN/data network · auto-clears on recovery" },
+      { t: "purple",  k: "Banner mirroring · RTL",       v: "All banners mirror correctly in RTL · icon + text order reversed · slide-in direction matches · attached at shell + feature levels per spec" },
+    ],
+    integration: [
+      { t: "orange",  k: "B4 VoIP endpoints",        v: "GET /voip/numbers (catalog) · GET /voip/my-numbers · POST /voip/numbers/:id/purchase · GET /voip/cdrs · POST /voip/calls · webhook drives provisioning state" },
+      { t: "orange",  k: "B4 VPN endpoints",         v: "GET /vpn/servers · POST /vpn/configs (G-07 consent gated) · POST /vpn/sessions/:id/start · POST /vpn/sessions/:id/end · GET /vpn/sessions/:id/status" },
+      { t: "warning", k: "B5 billing reuse",         v: "Number purchase via /payments/intents (M3 path) · Idempotency-Key generator reused · 3DS S-07 same flow · webhook drives final state" },
+      { t: "purple",  k: "Repository layer",         v: "VoipRepository · VpnRepository · ConsentRepository (G-07) · all return Result<T,ApiError> · widgets switch on code · empty/loading/error from M1" },
+      { t: "warning", k: "Platform plugins",         v: "flutter_callkit_incoming or platform_call_kit (iOS CallKit + Android ConnectionService) · platform_vpn (NEPacketTunnelProvider + VpnService) · clean Dart interface · entitlements doc'd" },
+      { t: "teal",    k: "Push integration",         v: "Incoming call push (V-02) · VoIP push (PushKit on iOS · high-priority FCM on Android) · separate channel from notification push · respects DND" },
+    ],
+    tests: [
+      "Region gating · disabled-market user → typed refusal surfaced gracefully · NEVER start-then-fail · VoIP browse + VPN connect both honor regional_flags",
+      "G-07 disclaimer · first VPN activation requires acceptance · persisted via API with version + timestamp · refusal blocks config issuance · re-prompt on policy version bump",
+      "Number purchase reuses M3 flow · same quote → PSP → 3DS → success · same Idempotency-Key · KYC fields surface from API when required",
+      "VPN connect happy path · 39 → G-07 (first time) → 40 connecting → 41 connected · HEAVY haptic on connect · IP shown · throughput live",
+      "VPN disconnect · 41 → 39 disconnected · session ended via B4 · platform VPN tunnel torn down · credentials cleared from session memory",
+      "VPN reconnect on network change · WiFi → cellular → G-11 banner · auto-reconnect · session_id resumes · NEVER silently drops protection",
+      "Captive portal G-10 · simulated hotel wifi → banner over active screen · 'Open portal' WebView · auto-dismiss on connectivity restored",
+      "Active call quality warning G-13 · induced jitter/loss → inline banner on V-01 · suggests network switch · auto-clear on recovery · NEVER separate page",
+      "Incoming call V-02 · push delivers → CallKit (iOS) / ConnectionService (Android) UI surfaces · accept / decline / DND respected",
+      "Light + dark + RTL render every screen · banners mirror correctly · numbers stay LTR in Arabic · Cairo font correct",
+      "Reduced-motion respected · VPN connecting ring replaced with cross-fade · pulse animations disabled · haptics still fire",
+      "Credentials never in logs · log scrubbing verified · session credentials in secure storage only · cleared on disconnect",
+      "Server list 42 · live load indicator · favorites persist · regional grouping correct · search works in ar + en",
+      "VPN settings 43 · auto-connect on trusted/untrusted networks · kill switch enforced · protocol selector default WireGuard · split tunnel where supported",
+      "CDRs 37 · cursor pagination · cost in minor units + currency from API · NEVER recomputed · empty state when no calls",
+      "Dialer 38 · paste-aware · contact picker · routes to V-01 · CallKit/ConnectionService integration · respects DND",
+    ],
+    edgeCases: [
+      "iOS Network Extension entitlement · com.apple.developer.networking.networkextension · Apple approval required pre-submission · Handoff item",
+      "iOS PushKit for VoIP push · com.apple.developer.pushkit.unrestricted-voip · separate from notification APNs · Handoff item",
+      "Android ConnectionService permissions · BIND_TELECOM_CONNECTION_SERVICE · MANAGE_OWN_CALLS · Handoff item",
+      "Android VpnService prepare() flow · user must approve VPN once · UI handles approval-denied gracefully",
+      "VoIP KYC variation · KSA / UAE may require ID verification for number purchase · API surfaces fields · which provider supports digital KYC",
+      "VPN legality per market · UAE permits licensed VPN only · KSA permits with restrictions · regional_flags + G-07 wording must match",
+      "Call quality threshold for G-13 · jitter ms · packet loss % · MOS score · which metric drives banner · vendor-specific",
+      "Captive portal detection · iOS captiveNetworkInfo deprecated · Android getNetworkCapabilities · cross-platform heuristic agreed",
+      "VPN protocol fallback · WireGuard primary · OpenVPN fallback if blocked · auto-detect or manual setting",
+      "VPN server load metric · provider-specific scale · UI shows low/med/high not raw number · normalization layer",
+    ],
+    handoff: [
+      "M5 Billing reuses · number purchase already through B5 · receipts in billing history without rebuild · subscription path for VoIP monthly via B5 subscriptions",
+      "M5 AI Advisor (B7) can recommend VPN/VoIP plan · routes into M4 browse + purchase flow with recommendation_id · acceptance-rate tracked",
+      "M6 Account · trusted networks list · auto-connect rules · VPN protocol preference · all editable from Account > Connect settings · M4 surfaces shape",
+      "M6 System states · G-02 / G-03 already in M1 shell · M4 adds G-07 / G-10 / G-11 / G-13 banners at appropriate level",
+      "Web admin (W1) A05 / A06 / A11 manage VoIP numbers + VPN sessions + servers · M4 client respects what admin disables in real time",
+      "iOS Network Extension entitlement · CallKit + PushKit entitlements · Android VpnService + ConnectionService · all flagged for Handoff before submission",
+    ],
+    pending: [
+      "iOS Network Extension entitlement approval · Apple developer agreement · timeline 2–4 weeks · pre-submission requirement",
+      "iOS PushKit unrestricted VoIP entitlement · same approval cycle · without it incoming call push degrades to standard notification",
+      "VPN provider final pick (B4) · self-hosted WireGuard vs resold · server geography · capacity per server · key rotation cadence",
+      "VoIP / DID provider final pick · per-country availability · KYC requirements per market · CDR delivery (push vs pull) · pricing model",
+      "VPN legality wording per market (UAE PDPL · KSA · Bahrain · Oman) · counsel-reviewed G-07 text · per-language version",
+      "Call-quality threshold tuning · jitter / loss / MOS scoring · false-positive rate vs missed-degradation · post-launch tuning",
+      "Captive portal heuristic · cross-platform reliability · false-positive rate on tethered hotspots",
+      "Trusted-network UX · auto-connect on untrusted · whitelist UX · battery cost vs protection-always",
+    ],
+    exit: [
+      "Connect tab is ONE area · VoIP + VPN sub-segmented control · shared IA · feels like one product not two",
+      "All 8 VoIP screens (31–38) live · light + dark + RTL · M1 widgets only",
+      "V-01 active call + V-02 incoming call live · CallKit (iOS) + ConnectionService (Android) integrated · DND respected",
+      "All 5 VPN screens (39–43) live · teal accent · token-driven · light/dark/RTL · reduced-motion alternative",
+      "G-07 disclaimer gates first VPN activation · persisted via API · refusal blocks config issuance",
+      "Region gating strict · disabled markets surfaced gracefully · NEVER start-then-fail",
+      "Number purchase reuses M3 quote → PSP → 3DS → success · idempotent · KYC fields surface when required",
+      "VPN connect / disconnect / reconnect lifecycle green · platform tunnel · session-bound credentials · cleared on disconnect",
+      "G-10 captive portal banner · G-11 VPN reconnecting banner · G-13 call-quality inline · all attached at correct level · RTL mirror correct",
+      "VPN heavy haptic on connect · primary tap light · reduced-motion respected · ring + pulse animations have alternatives",
+      "Credentials never in logs · session-only secure storage · log scrubbing verified",
+      "B4 VoIP + VPN endpoints wired · webhooks drive provisioning · CDRs paginated · server list live load indicator",
+      "Platform entitlements flagged in Handoff · iOS Network Extension · PushKit VoIP · Android VpnService + ConnectionService",
+      "Edge cases logged in Handoff · NOT code blockers · M5 Billing/Loyalty/AI inherits stable purchase + connection flows",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -2087,6 +2210,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "m1") return buildBackendM1Page(page, spec);
   if (spec.kind === "m2") return buildBackendM2Page(page, spec);
   if (spec.kind === "m3") return buildBackendM3Page(page, spec);
+  if (spec.kind === "m4") return buildBackendM4Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -3528,6 +3652,103 @@ async function buildBackendM3Page(page, spec) {
 
   // Exit
   y = sectionHeader(page, "Exit", "Phase M3 exit checklist · revenue core complete", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildBackendM4Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 00 · Non-negotiables
+  y = sectionHeader(page, "00", "Non-negotiables · one tab two services · region gating · G-07 gate · platform entitlements", 0, y);
+  rules2col(spec.rules, 110);
+
+  // 01 · VoIP screens
+  y = sectionHeader(page, "01", "VoIP · 31–38 · empty / filled / browse / detail / purchase / history / dialer", 0, y);
+  kv2col(spec.voipScreens, 110);
+
+  // 02 · Calls
+  y = sectionHeader(page, "02", "Calls · V-01 active (G-13 inline) · V-02 incoming (CallKit / ConnectionService overlay)", 0, y);
+  kv2col(spec.voipCalls, 110);
+
+  // 03 · VPN screens
+  y = sectionHeader(page, "03", "VPN · 39–43 · disconnected / connecting / connected / server list / settings", 0, y);
+  kv2col(spec.vpnScreens, 110);
+
+  // 04 · Activation flow
+  y = sectionHeader(page, "04", "Activation · G-07 disclaimer → config issuance → tunnel lifecycle → reconnect", 0, y);
+  kv2col(spec.activationFlow, 110);
+
+  // 05 · Contextual banners
+  y = sectionHeader(page, "05", "Contextual banners · G-10 captive · G-11 reconnecting · G-13 call quality · RTL mirror", 0, y);
+  kv2col(spec.contextualBanners, 110);
+
+  // 06 · Integration
+  y = sectionHeader(page, "06", "Integration · B4 VoIP + VPN · B5 reuse · platform plugins · push", 0, y);
+  kv2col(spec.integration, 110);
+
+  // 07 · Tests
+  y = sectionHeader(page, "07", "Test surface · region · G-07 gate · tunnel lifecycle · banners · push · credentials safety", 0, y);
+  fullRows(spec.tests, 56, "purple", true);
+
+  // 08 · Edge cases
+  y = sectionHeader(page, "08", "Edge cases · platform entitlements · KYC · legality · protocol fallback", 0, y);
+  fullRows(spec.edgeCases, 64, "orange", false);
+
+  // 09 · Handoff
+  y = sectionHeader(page, "09", "Handoff to M5 / M6 / W1 · what reuses + what M4 flags for entitlements", 0, y);
+  fullRows(spec.handoff, 64, "teal", false);
+
+  // 10 · Pending
+  y = sectionHeader(page, "10", "Pending · platform / provider / legal decisions · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase M4 exit checklist · Connect (VoIP + VPN)", 0, y);
   fullRows(spec.exit, 56, "teal", true);
 }
 

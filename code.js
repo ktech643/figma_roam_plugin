@@ -24,6 +24,7 @@ const PAGE_ORDER = [
   "■ M2 — Onboarding & Auth",
   "■ M3 — Home & eSIM",
   "■ M4 — Connect (VoIP & VPN)",
+  "■ M5 — AI, Billing & Loyalty",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -2169,6 +2170,127 @@ const BACKEND_PAGES = [
       "Edge cases logged in Handoff · NOT code blockers · M5 Billing/Loyalty/AI inherits stable purchase + connection flows",
     ],
   },
+  {
+    name: "■ M5 — AI, Billing & Loyalty",
+    kind: "m5",
+    kicker: "M5 · MOBILE · AI ADVISOR + BILLING + LOYALTY · 44–57 + B-01/B-02 + G-12 + G-14 · ENTRY-POINT AI · LEDGER-BACKED LOYALTY",
+    title: "AI Advisor + Billing + Loyalty · Figma 44–57 + B-01/B-02",
+    subtitle: "Three sub-features: features/ai · features/billing · features/loyalty. AI is an entry-point feature reachable from Home — NOT a bottom-nav tab. Reuses M3 purchase flow (quote → PSP → 3DS → success) for plan/reward checkout. Purple = AI · orange = CTA · transparent billing · ledger-backed loyalty (never client-cached balance) · no casino patterns · share via platform sheet · G-14 trial expiry modal · G-12 payment timeout shared with M3.",
+    rules: [
+      { t: "warning", v: "M1 tokens / widgets only · light + dark + RTL everywhere · numbers/prices LTR in Arabic · PURPLE is the AI color · ORANGE for CTAs per brand role separation" },
+      { t: "warning", v: "AI is an ENTRY-POINT feature · NOT a bottom-nav tab · reachable from Home + relevant contexts · not from the 4-tab nav (Home/eSIM/Connect/Account)" },
+      { t: "warning", v: "AI NEVER invents plans or prices · surfaces validated recommendations from B7 (grounded on live catalog) · app renders what API returns · accepting routes into M3 screen 25 · NEVER charges directly" },
+      { t: "warning", v: "Money is integer-minor-units + currency from API · subscriptions/prices/tax from B5 per Phase FL per-market rules · NEVER recompute or trust client-set amounts" },
+      { t: "warning", v: "Payment uses external PSP path (Phase FL) · reuse M3 PaymentIntent + 3DS + Idempotency-Key · G-12 payment-timeout handled identically to M3" },
+      { t: "warning", v: "Loyalty balance is API computed value from B6 ledger · NEVER compute or cache divergent balance client-side · redemption server-validated · app reflects result" },
+      { t: "purple",  v: "Loyalty MUST NOT feel casino-like or manipulative · no fake urgency · no dark patterns · referral sharing via platform share sheet only" },
+      { t: "purple",  v: "Haptics · payment/redeem success = success haptic · primary tap = light · reduced-motion alternative for AI typing indicator + any confetti/success animation" },
+    ],
+    aiScreens: [
+      { t: "purple",  k: "44 · AI Chat Welcome",       v: "Entry-point landing · suggested prompts (3–5 from B7 config) · 'How can I help?' · purple accent · routes to 45 on tap · history link → 47" },
+      { t: "purple",  k: "45 · AI Chat Active",        v: "Message thread using M1 AI chat bubble · typing indicator with reduced-motion alt (cross-fade) · stream OR request/response per B7 contract · scroll-restore · safe-area aware" },
+      { t: "warning", k: "46 · AI Recommendation Card", v: "Explainable · shows WHY this plan + alternatives from B7 · grounded on live B5 catalog · CTA 'Continue' routes into M3 screen 25 with plan + recommendation_id pre-attached · NEVER charges directly" },
+      { t: "purple",  k: "47 · AI Advisor History",    v: "Past threads + past recommendations with outcomes (accepted/declined/purchased) · cursor pagination · empty/loading/error · routes back into 45 to resume" },
+    ],
+    billingScreens: [
+      { t: "orange",  k: "48 · PAYG Plans",            v: "Pay-as-you-go catalog from B5 · grouped by region/use-case · price minor+currency · tax per market per FL · CTA → M3 quote → 25" },
+      { t: "orange",  k: "49 · Monthly Plans",         v: "Subscription catalog (monthly) from B5 · trial offer surfaced if eligible · proration shown when changing · CTA → M3 quote → 25" },
+      { t: "orange",  k: "50 · Yearly Plans",          v: "Subscription catalog (yearly) from B5 · savings vs monthly displayed (server-computed) · trial offer if eligible · CTA → M3 quote → 25" },
+      { t: "purple",  k: "51 · My Subscription",       v: "Status · current period end · trial end if any · 'Change plan' (proration reflected from B5) · 'Cancel' → B-02 · receipts link → 53" },
+      { t: "teal",    k: "52 · Payment Methods",       v: "List (last-4 + brand from API) · default badge · 'Add new' → B-01 · safe-remove rules (cannot remove default with active sub) · server-enforced" },
+      { t: "purple",  k: "53 · Billing History",       v: "Invoices/payments from B5 · status · amount minor+currency · receipt download (B5 PDF) · cursor pagination · empty state" },
+      { t: "warning", k: "B-01 · Add New Card",        v: "B5 setup intent path · PSP-hosted card collection · NEVER card data through app · returns payment_method_id · sets default option" },
+      { t: "warning", k: "B-02 · Cancellation Flow",   v: "Cancel-at-period-end vs immediate · confirmation + reason capture · reflects B5 outcome (period_end vs immediate refund per FL) · audit-logged" },
+    ],
+    loyaltyScreens: [
+      { t: "purple",  k: "54 · Loyalty Dashboard",     v: "Computed balance from B6 (NEVER local) · recent ledger entries (earn/redeem) · tier if any · routes to 55 / 56 / 57 · no manipulative patterns" },
+      { t: "purple",  k: "55 · How To Earn",           v: "Rules rendered from B6 config · matches live rules exactly · NEVER hardcoded · clear language · no fake urgency" },
+      { t: "warning", k: "56 · Redeem Points",         v: "Rewards catalog · 'Redeem' → server-validates → applied reward reduces M3 quote SERVER-SIDE · client never applies discount · success haptic on confirm" },
+      { t: "teal",    k: "57 · Referral Program",      v: "Share code/link via PLATFORM SHARE SHEET · status of pending/approved/rejected referrals · counter from B6 · no manipulative streaks" },
+    ],
+    gates: [
+      { t: "warning", k: "G-14 · Free Trial Expiry",   v: "Modal on FIRST APP OPEN after trial expiry · driven by B5 trial-expiry event · NOT a settings screen · routes to convert (49/50) or downgrade (PAYG 48) · dismiss persists" },
+      { t: "warning", k: "G-12 · Payment Timeout",     v: "Shared with M3 · reuse identical handling · idempotent retry via same Idempotency-Key · webhook source-of-truth · NEVER assume failed on timeout alone" },
+      { t: "purple",  k: "Recommendation linkage",     v: "AI rec → M3 purchase preserves recommendation_id end-to-end · B6 attribution · acceptance-rate analytics · survives 3DS bounce" },
+      { t: "purple",  k: "Reactive state updates",     v: "After cancel / redeem / refer / subscribe · subscription/loyalty/referral states refresh reactively (Riverpod invalidation or Bloc emit) · no stale UI" },
+    ],
+    integration: [
+      { t: "orange",  k: "B7 AI Advisor endpoints",    v: "POST /ai/threads · POST /ai/threads/:id/messages (stream or req/resp) · GET /ai/recommendations/:id · POST /ai/recommendations/:id/accept (returns plan_id + idempotency_hint)" },
+      { t: "orange",  k: "B5 Billing endpoints",       v: "GET /billing/plans · GET /billing/subscription · POST /billing/subscription/change · POST /billing/subscription/cancel · GET /billing/payment-methods · POST /billing/setup-intent · GET /billing/invoices" },
+      { t: "warning", k: "B5 Quote / PaymentIntent",   v: "Reuses M3 path · POST /quotes · POST /payments/intents · 3DS S-07 · webhook → success · same Idempotency-Key generator · trial expiry pushes G-14 event" },
+      { t: "purple",  k: "B6 Loyalty endpoints",       v: "GET /loyalty/balance (server-computed from append-only ledger) · GET /loyalty/ledger · GET /loyalty/rewards · POST /loyalty/redeem (server-validated) · GET /loyalty/referrals · POST /loyalty/referrals" },
+      { t: "warning", k: "Discount at quote",          v: "Redeemed reward applied SERVER-SIDE at quote step · client passes redemption_id · server validates + reduces · client renders new total · NEVER client math" },
+      { t: "teal",    k: "Repository layer",           v: "AdvisorRepository · BillingRepository · SubscriptionRepository · PaymentMethodRepository · LoyaltyRepository · ReferralRepository · all return Result<T,ApiError>" },
+    ],
+    tests: [
+      "AI welcome 44 · suggested prompts from B7 config · tap routes to 45 with prompt seeded · purple accent · entry from Home + contextual surfaces only (NOT bottom nav)",
+      "AI active 45 · stream or req/resp per contract · typing indicator with reduced-motion cross-fade alternative · scroll restore · message persistence",
+      "AI recommendation 46 · explainable rationale + alternatives · CTA routes into M3 screen 25 with plan_id + recommendation_id · NEVER charges directly · linkage preserved through 3DS",
+      "AI history 47 · past threads + recommendation outcomes · cursor pagination · resume thread → 45 with context",
+      "Billing catalogs 48/49/50 · tax per market per FL · prices minor+currency from API · trial offer surfaced when eligible · CTA → M3 quote",
+      "My Subscription 51 · status + period_end + trial_end accurate · change-plan shows proration from B5 · cancel routes to B-02",
+      "Payment Methods 52 · last-4 + brand from API · default badge · add-new B-01 setup intent · safe-remove rules enforced server-side (UI reflects)",
+      "Billing History 53 · invoices from B5 · receipt PDF download · cursor pagination · empty/loading/error",
+      "B-01 Add Card · PSP-hosted collection · NEVER card data through app · returns payment_method_id · sets default if first",
+      "B-02 Cancellation · cancel-at-period-end vs immediate per FL · reason capture · reflects B5 outcome · audit-logged",
+      "G-14 trial expiry · first app open after expiry shows modal · driven by B5 event · routes to convert (49/50) or downgrade (48) · dismiss persists",
+      "G-12 payment timeout · reuse M3 handling · idempotent retry · webhook source-of-truth · NEVER assume failed on timeout alone",
+      "Loyalty Dashboard 54 · balance from B6 (NEVER local cache) · ledger entries · tier · refreshes after earn/redeem",
+      "How To Earn 55 · rules rendered from B6 config · matches live rules · NEVER hardcoded",
+      "Redeem 56 · server-validates · applied at M3 quote step server-side · success haptic · client never applies discount",
+      "Referral 57 · platform share sheet on iOS/Android · status counts from B6 · no fake urgency / streak manipulation",
+      "Light + dark + RTL render every screen · numbers stay LTR in Arabic · Cairo font · purple AI consistent",
+      "Reduced-motion · AI typing indicator cross-fade · confetti/success animation alternative · haptics still fire",
+      "Recommendation linkage · recommendation_id survives quote → 3DS → success → B6 attribution · analytics intact",
+      "Reactive refresh · cancel sub / redeem reward / send referral · UI updates without manual reload",
+    ],
+    edgeCases: [
+      "AI streaming vs request/response · final B7 contract decision · UI handles both behind same chat bubble · backpressure for long responses",
+      "AI rate limits · B7 throttle policy · UI shows graceful 'thinking...' with timeout fallback · NEVER infinite spinner",
+      "AI safety · B7 returns refusal envelope for off-topic / unsafe requests · UI renders typed refusal · NEVER bare error",
+      "Proration display · how to show 'you'll be charged X today, then Y/month' · server provides breakdown · client renders verbatim",
+      "Trial-to-paid transition · grace period vs immediate · per-market rules · B5 emits canonical event",
+      "Loyalty economics still pending business sign-off · earn rates · redeem ratios · expiry policy · per-market caps from B6/FL",
+      "Reward applied to quote · what happens if quote expires · re-validate redemption · idempotent",
+      "Referral attribution · self-referral block · fraud detection · admin approval queue (W1 A13)",
+      "Multi-currency subscription · subscription locked to original currency at sign-up · displayed in user locale · no mid-cycle conversion",
+      "Failed payment on subscription renewal · grace period · dunning emails · UI surfaces 'payment issue' state · routes to 52 to update",
+    ],
+    handoff: [
+      "M6 Account · subscription summary card · loyalty balance card · referral code link · all from M5 surfaces · M5 exposes shape",
+      "M6 System · G-14 modal lives at app shell level (first-open detection) · M5 provides component · shell wires the trigger",
+      "M6 Notifications · trial-expiry · payment-failed · referral-approved · reward-redeemed · push templates from M5 events",
+      "W1 admin · A08 plans · A09 pricing · A12 loyalty ledger + adjustment · A13 referral approval · M5 client respects what admin configures live",
+      "B7 contract · streaming vs req/resp final · safety refusal envelope shape · recommendation explainability schema",
+      "B6 economics · earn/redeem rates per market · expiry · caps · all configurable in admin (A12) · M5 renders from config never hardcoded",
+    ],
+    pending: [
+      "AI streaming vs request/response · final B7 contract decision · vendor capability · UX trade-offs",
+      "Proration display detail · breakdown fields surfaced · localization of 'effective today' wording",
+      "Loyalty economics · earn rates · redeem ratios · expiry policy · per-market caps · business sign-off (B6/FL)",
+      "Trial mechanics · length per plan · grace period · auto-convert vs require-confirm · per-market legality",
+      "Referral payout · points vs credit vs cash · approval threshold · fraud heuristics",
+      "AI suggested-prompts curation · who owns content · refresh cadence · per-segment personalization",
+      "Cancellation reason taxonomy · structured options vs free text · feeds retention analytics",
+      "G-14 modal copy · convert vs downgrade vs dismiss · per-market language · counsel-reviewed if applicable",
+    ],
+    exit: [
+      "AI Advisor 44–47 live · purple accent · entry-point only (NOT bottom nav) · reachable from Home + contextual surfaces",
+      "AI never invents plans/prices · always surfaces B7 validated recommendations · accept routes into M3 screen 25 with linkage",
+      "Billing 48–53 + B-01 + B-02 live · transparent pricing · tax per FL · M3 purchase flow reused · NEVER client math",
+      "G-14 trial expiry modal · first-open detection · routes to convert/downgrade · NOT a settings screen",
+      "G-12 payment timeout · identical to M3 · idempotent · webhook source-of-truth",
+      "Loyalty 54–57 live · balance from B6 ledger NEVER client-cached · rules from B6 config NEVER hardcoded",
+      "Redemption server-validated · applied at M3 quote step server-side · client renders result",
+      "Referral via platform share sheet · no casino patterns · no fake urgency · transparent status",
+      "Light + dark + RTL all screens · purple AI consistent · orange CTAs · numbers LTR in Arabic",
+      "Reduced-motion alternatives · typing indicator · success animation · haptics still fire",
+      "Reactive state updates after cancel/redeem/refer · no stale UI · Riverpod/Bloc invalidation correct",
+      "Recommendation linkage preserved end-to-end · B6 attribution intact · acceptance-rate analytics live",
+      "Repository layer wraps B5/B6/B7 · all return Result<T,ApiError> · empty/loading/error from M1",
+      "Edge cases logged in Handoff · pending economics NOT a code blocker · M6 Account/System/Notifications inherits stable surfaces",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -2211,6 +2333,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "m2") return buildBackendM2Page(page, spec);
   if (spec.kind === "m3") return buildBackendM3Page(page, spec);
   if (spec.kind === "m4") return buildBackendM4Page(page, spec);
+  if (spec.kind === "m5") return buildBackendM5Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -3750,6 +3873,88 @@ async function buildBackendM4Page(page, spec) {
   // Exit
   y = sectionHeader(page, "Exit", "Phase M4 exit checklist · Connect (VoIP + VPN)", 0, y);
   fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildBackendM5Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.purple);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  y = sectionHeader(page, "00", "Non-negotiables · entry-point AI · never invents prices · ledger-backed loyalty · no casino patterns", 0, y);
+  rules2col(spec.rules, 110);
+
+  y = sectionHeader(page, "01", "AI Advisor · 44–47 · welcome · active chat · explainable recommendation · history", 0, y);
+  kv2col(spec.aiScreens, 110);
+
+  y = sectionHeader(page, "02", "Billing · 48–53 + B-01 + B-02 · catalogs · subscription · payment methods · history · cancellation", 0, y);
+  kv2col(spec.billingScreens, 110);
+
+  y = sectionHeader(page, "03", "Loyalty · 54–57 · dashboard · how to earn · redeem · referral", 0, y);
+  kv2col(spec.loyaltyScreens, 110);
+
+  y = sectionHeader(page, "04", "Gates · G-14 trial expiry modal · G-12 shared with M3 · recommendation linkage · reactive refresh", 0, y);
+  kv2col(spec.gates, 110);
+
+  y = sectionHeader(page, "05", "Integration · B7 advisor · B5 billing · B6 loyalty · M3 quote reuse · server-side discount", 0, y);
+  kv2col(spec.integration, 110);
+
+  y = sectionHeader(page, "06", "Test surface · AI flows · billing flows · loyalty flows · gates · linkage · reactivity", 0, y);
+  fullRows(spec.tests, 56, "purple", true);
+
+  y = sectionHeader(page, "07", "Edge cases · streaming · proration · loyalty economics · referral fraud · multi-currency", 0, y);
+  fullRows(spec.edgeCases, 64, "orange", false);
+
+  y = sectionHeader(page, "08", "Handoff to M6 / W1 · what reuses + what M5 flags pending", 0, y);
+  fullRows(spec.handoff, 64, "teal", false);
+
+  y = sectionHeader(page, "09", "Pending · contract / economics / business decisions · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  y = sectionHeader(page, "Exit", "Phase M5 exit checklist · AI + Billing + Loyalty", 0, y);
+  fullRows(spec.exit, 56, "purple", true);
 }
 
 async function buildAccessibilityPage(page) {

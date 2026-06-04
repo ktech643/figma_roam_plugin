@@ -22,6 +22,7 @@ const PAGE_ORDER = [
   "■ W1 — Web Admin Frontend",
   "■ M1 — Flutter Foundation",
   "■ M2 — Onboarding & Auth",
+  "■ M3 — Home & eSIM",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -1926,6 +1927,125 @@ const BACKEND_PAGES = [
       "Edge cases logged in Handoff · NOT code blockers · M3 begins on active verified session",
     ],
   },
+  {
+    name: "■ M3 — Home & eSIM",
+    kind: "m3",
+    kicker: "M3 · MOBILE · HOME & ESIM · 16–30 + E-01/02/03 + G-08 + G-12 + S-07 · REVENUE CORE",
+    title: "Home & eSIM · Figma 16–30 + E-01/E-02/E-03",
+    subtitle: "Revenue core · ties M1 plumbing to B4 provisioning + B5 billing. External PSP path (FL D2: eSIM = service consumed outside app · NOT Apple IAP). Server-computed quote · G-08 refund inline on 25 · Idempotency-Key on purchase/top-up · provision_status SEPARATE from install_status · auto-refund on paid-but-failed-provision · NEVER silent charged-but-undelivered.",
+    rules: [
+      { t: "warning", v: "M1 tokens / widgets only · light + dark + RTL everywhere · numbers/prices LTR in Arabic strings · zero hardcoded hex" },
+      { t: "warning", v: "Prices · plans · availability from B4 catalog API · NEVER hardcoded · NEVER recomputed client-side · money is integer minor + currency from API · formatted per locale" },
+      { t: "warning", v: "Payment is EXTERNAL PSP path per FL D2 · eSIM = service consumed outside app · NOT Apple IAP · B5 PaymentIntent + 3DS flow · server computes quote · client-set price/discount IGNORED" },
+      { t: "warning", v: "Region gating respected · regional_flags filters catalog · disabled markets NEVER show purchasable plans · defense-in-depth at API layer also" },
+      { t: "warning", v: "provision_status SEPARATE from install_status per B4 · purchase success ≠ installed · install guide reports back · NEVER assume install happened" },
+      { t: "warning", v: "G-08 refund notice INLINE on screen 25 · NOT separate page · acknowledgement persisted with policy_version via API · attached to payment row" },
+      { t: "warning", v: "Idempotency-Key from M1 on purchase / top-up POSTs · same key on retry → no double-charge · 24h TTL respected" },
+      { t: "purple",  v: "Haptics · payment / eSIM success = success notification haptic · primary tap = light · per accessibility pass" },
+    ],
+    homeScreens: [
+      { t: "orange",  k: "16 · Home · No Plan",        v: "Empty conversion-oriented · entry to browse 21 · optional AI advisor entry point (B7) · 'Browse plans' primary CTA · regional badge for user market" },
+      { t: "purple",  k: "17 · Home · Active Plan",    v: "Progress ring from M1 (data remaining + days remaining) · plan card · top-up CTA · usage from B4 esim_usage · HIGH-CONTRAST variant per accessibility pass" },
+      { t: "orange",  k: "18 · Home · Multiple Plans", v: "Stacked plan cards · per-plan progress · swipe between · primary CTA per active plan · sort by expiry" },
+      { t: "warning", k: "19 · Home · Expiring Soon",  v: "Clear renew / top-up CTA · expiry badge (red < 24h · amber < 7d) · routes to top-up E-02 or new browse 21 · push-prompt eligible" },
+      { t: "purple",  k: "20 · Notifications Panel",   v: "List from B4/B6/B7 events · usage low · plan expiring · payment success · referral completed · advisor recommendation · cleared individually or all" },
+    ],
+    browseFlow: [
+      { t: "orange",  k: "21 · Plans Browser",       v: "Filter by country / region (regional bundle) · from B4 catalog · cursor pagination · empty/loading/error from M1 · brand-orange CTAs" },
+      { t: "orange",  k: "22 · Plan Detail",         v: "Coverage list · data + days · price (server-formatted) · provider note · 'Buy' primary CTA · routes to 25 (or E-01 first if compatibility unknown)" },
+      { t: "purple",  k: "23 · Country Search",      v: "Search input · country list with flag · filters drive 21 · recent searches stored locally" },
+      { t: "purple",  k: "24 · Regional Bundle",     v: "Multi-country bundle (e.g. GCC · Europe · Asia) · price + coverage · same purchase flow as single-country" },
+      { t: "warning", k: "E-01 · Compatibility",     v: "Device eSIM capability check · platform_eSIM API where available · honest report (supported / not / unknown · iOS 12.1+ + dual-SIM specifics) · can appear pre-browse for first-time" },
+    ],
+    purchaseFlow: [
+      { t: "warning", k: "25 · Purchase Review",     v: "Server-computed quote · line items · tax per FL D3 per-market rule · TOTAL from server · G-08 refund notice INLINE · acknowledgement checkbox required · POST /payments/intents on Pay" },
+      { t: "warning", k: "26 · Payment Select",      v: "PSP methods (Tap/PayTabs/Stripe per FL D1) · saved cards · Apple Pay where supported · add-card via B5 SetupIntent · default selection · default-card token-ref only" },
+      { t: "warning", k: "S-07 · 3DS Challenge",     v: "PSP 3DS WebView OR SDK (decision per chosen PSP) · success/fail/cancel handled · client confirmation NOT trusted (B5 webhook is source of truth) · returns to 27 on webhook" },
+      { t: "purple",  k: "27 · Purchase Success",    v: "Animated success · success haptic · routes to 30 install guide · linked to provisioning poll · receipt + invoice download via B5" },
+      { t: "warning", k: "G-12 · Payment Timeout",   v: "Intent not confirmed in window → recoverable timed-out state · safe retry uses SAME Idempotency-Key · late webhook does not re-charge · clear localized message" },
+      { t: "warning", k: "Paid-but-provision-failed", v: "B4 fails after payment succeeded → reflect B5 auto-refund OR flagged-review outcome · NEVER silent · user notified · audit + reconciliation row · routes to support if flagged" },
+    ],
+    postPurchase: [
+      { t: "teal",    k: "Provisioning poll",        v: "After 27 success · GET /esim/orders/:id status (or push) · pending → provisioning → provisioned/failed · live UI state · on provisioned → 30 install guide" },
+      { t: "warning", k: "30 · Installation Guide",  v: "Clear iOS vs Android steps · LPA activation string + QR + Universal Link from B4 · Universal-Link install where supported · NEVER claim in-app iOS provisioning that isn't available · 'I installed' button reports install_status" },
+      { t: "purple",  k: "28 · My eSIMs",            v: "List active + historical · status badges · expiry · usage summary · taps into 29 · provision_status + install_status both surfaced" },
+      { t: "purple",  k: "29 · eSIM Detail / Usage", v: "Live usage from B4 · progress ring · expiry · low-balance prompts (B6 push) · re-show install guide if not installed · top-up entry to E-02" },
+    ],
+    topUp: [
+      { t: "orange",  k: "E-02 · Top-Up Plan Select", v: "Available top-up SKUs for the eSIM from B4 · same regional gating · price from server · routes to E-03" },
+      { t: "warning", k: "E-03 · Top-Up Review & Pay", v: "Same quote → PSP → 3DS path as 25/26/S-07 · same Idempotency-Key generator · same G-08 acknowledgement (latest version) · top-up provisioning resumes existing eSIM" },
+    ],
+    integration: [
+      { t: "orange",  k: "B4 catalog endpoints",     v: "GET /catalog/countries · /catalog/plans · /catalog/regional-bundles · /esim/compatibility · /esim/orders · /esim/orders/:id · /esim/usage" },
+      { t: "warning", k: "B5 billing endpoints",     v: "POST /payments/intents · /payments/:id/confirm · /setup-intents · GET /payments/:id · webhook drives final state · 3DS via PSP" },
+      { t: "warning", k: "Idempotency-Key plumbing", v: "M1 generator · stored on in-flight purchase · reused on retry across screen rebuilds · 24h TTL aware · clears on success or hard failure" },
+      { t: "purple",  k: "Repository layer",         v: "CatalogRepository · EsimRepository · PaymentRepository · all return Result<T,ApiError> · widgets switch on code · loading/empty/error states from M1" },
+      { t: "teal",    k: "AI advisor entry path",    v: "From B7/M5 · advisor recommendation can pre-select plan · route directly into 25 Purchase Review · recommendation_id linked to order for analytics" },
+      { t: "warning", k: "Provisioning state UI",    v: "Polling interval (default 3s · capped 60s) OR FCM/APNs push · live UI state · timeout → graceful 'taking longer than expected' state with support entry" },
+    ],
+    tests: [
+      "Server-computed quote · client-side discount/price ignored · screen 25 total = server response total · tax line per market FL D3",
+      "G-08 acknowledgement INLINE on 25 · checkbox required to enable Pay · POST stores policy_version on payment row · per-version retention",
+      "Idempotent purchase · same Idempotency-Key on retry → no double-charge · second response mirrors first · UI reflects original outcome",
+      "3DS happy path · S-07 challenge succeeds → webhook flips → 27 success · client confirmation alone does NOT flip state",
+      "3DS cancel · user cancels → 25 returnable state · same Idempotency-Key reusable · no duplicate intent",
+      "G-12 payment timeout · intent ages → timed_out · safe retry · late webhook does not re-charge · clear localized message",
+      "Paid-but-provision-failed · provisioning fails after payment → auto-refund OR flagged-review surfaced · NEVER charged-but-undelivered silent",
+      "Provisioning state UI · pending → provisioning → provisioned · install guide surfaces only on provisioned · failure routes to support",
+      "provision_status vs install_status separate · purchase 27 ≠ installed · 'I installed' button on 30 reports install · 28 reflects both",
+      "Region gating · disabled-market plan never shown · API returns empty list · UI shows market-aware empty state",
+      "Compatibility E-01 · iOS unsupported device → honest 'not supported' · Android with eSIM API → supported · unknown → falls back manual",
+      "Installation guide iOS vs Android · iOS shows Universal Link primary · Android shows LPA string + QR · NEVER claims in-app iOS provisioning",
+      "Top-up E-02/E-03 · same idempotent quote → PSP → 3DS path · resumes existing eSIM · usage updates on next poll",
+      "Light + dark + RTL render every screen · screen-17 high-contrast variant verified · numbers stay LTR in Arabic",
+      "Loading + empty + error states for every list · network down → retry banner · 5xx → error boundary · 422 → form errors",
+      "Money formatting · API { amount, currency } → 'AED 12.50' style · multi-currency users see correct symbol · NEVER recomputed",
+      "AI advisor entry path · advisor recommendation → 25 with pre-selected plan · recommendation_id linked to resulting order",
+      "Haptics · payment success = success notification haptic · primary tap = light · respects reduced-motion (haptic still fires)",
+    ],
+    edgeCases: [
+      "3DS SDK vs WebView per chosen PSP · Tap / PayTabs / Stripe each have different integration · adapter wraps · UI agnostic",
+      "Usage polling vs push for live balance · 3s poll on detail screen · push for low-balance · battery vs freshness tradeoff",
+      "Universal Link install reliability · iOS captures install confirmation only sometimes · fallback 'I installed' button always available",
+      "Apple Pay availability per market · UAE supported · KSA limited · Apple Pay button conditional · token still goes through PSP not direct",
+      "Quote freshness · screen 25 quote TTL (5 min default) · stale → re-fetch on Pay tap · price-change rare but handled gracefully",
+      "Multi-eSIM device limits · iOS supports up to 8 eSIMs but only 2 active · UI surfaces this limit on install guide for power users",
+      "Captive-portal during purchase (G-10) · checkout suspended → resume on connectivity · idempotency protects against double-submit",
+    ],
+    handoff: [
+      "M4 Connect (VoIP + VPN) reuses · 25 quote → 26 PSP → S-07 3DS → 27 success purchase flow · same Idempotency-Key path · same provisioning poll pattern",
+      "M5 Billing screens (48–53) reuse · payment-method picker (26) · receipt detail · invoice list · saved cards already in B5 token store",
+      "M5 Loyalty (B6) earns from 27 success event · M5 Advisor (B7) routes into 25 with recommendation_id · both paths covered here",
+      "M6 System states · G-02 / G-10 / G-11 banner overlays already wired in M1 shell · purchase flow respects without rebuild",
+      "G-12 payment timeout state shape stable · M5 billing history surfaces same timeout outcome · same recovery path",
+    ],
+    pending: [
+      "3DS integration · WebView vs native SDK per chosen PSP from FL D1 · UX continuity tradeoff · in-app browser vs full screen",
+      "Usage refresh cadence · 3s poll vs FCM push · per-screen tradeoff · battery cost on low-end Android",
+      "Apple Pay availability matrix · per-market enablement · regional_flags drives visibility · live PSP support confirmed",
+      "Compatibility check honesty · how strict on 'unknown' · default-allow vs default-block · false-negative cost",
+      "Installation success rate measurement · client-reported vs B4 webhook · which is source of truth for analytics",
+      "AI advisor entry surface · banner on 16 vs floating button vs inline card · A/B test plan",
+      "Quote TTL · 5 min vs 15 min · refresh-on-Pay vs refresh-on-screen-show · PSP behavior on stale intent",
+    ],
+    exit: [
+      "All 5 home screens (16–20) live · light + dark + RTL · screen-17 high-contrast variant · M1 widgets only",
+      "All 4 browse screens (21–24) + E-01 compatibility live · regional gating respected · cursor pagination · empty/loading/error states",
+      "Purchase flow (25–27 + S-07 + G-08 + G-12) green · server-computed quote · refund inline · 3DS happy + cancel + timeout paths tested",
+      "Idempotency-Key on every purchase + top-up POST · retry safe · 24h TTL respected",
+      "Paid-but-provision-failed surfaces auto-refund or flagged-review · NEVER silent charged-but-undelivered",
+      "Provisioning poll/push live · pending → provisioning → provisioned/failed · install guide on provisioned only",
+      "Installation guide iOS vs Android distinct · Universal Link primary on iOS · LPA string + QR on Android · 'I installed' reports install",
+      "My eSIMs (28) + detail (29) live · provision_status + install_status both surfaced · live usage · low-balance prompts",
+      "Top-up E-02/E-03 reuses same quote→PSP→3DS path · idempotent · resumes existing eSIM",
+      "AI advisor entry path · recommendation pre-selects plan into 25 · recommendation_id linked to order",
+      "B0 envelope mapped to localized messages · 422 details flow into form · 5xx retry banner · 401 silent refresh from M1",
+      "Money formatting from API integer-minor + currency · zero client recomputation · multi-currency labels respected",
+      "Light + dark + RTL verified on every screen · numbers LTR in Arabic · Cairo font correct",
+      "Haptics + reduced-motion respected per accessibility map",
+      "Edge cases logged in Handoff · NOT blockers · M4 Connect inherits stable purchase flow",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -1966,6 +2086,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "w1") return buildBackendW1Page(page, spec);
   if (spec.kind === "m1") return buildBackendM1Page(page, spec);
   if (spec.kind === "m2") return buildBackendM2Page(page, spec);
+  if (spec.kind === "m3") return buildBackendM3Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -3310,6 +3431,103 @@ async function buildBackendM2Page(page, spec) {
 
   // Exit
   y = sectionHeader(page, "Exit", "Phase M2 exit checklist · first feature pack", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildBackendM3Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 00 · Non-negotiables
+  y = sectionHeader(page, "00", "Non-negotiables · server-computed quote · external PSP · provision vs install · idempotency", 0, y);
+  rules2col(spec.rules, 110);
+
+  // 01 · Home (16–20)
+  y = sectionHeader(page, "01", "Home · 16–20 · No Plan / Active / Multiple / Expiring / Notifications", 0, y);
+  kv2col(spec.homeScreens, 110);
+
+  // 02 · Browse + compatibility
+  y = sectionHeader(page, "02", "Browse · 21 / 22 / 23 / 24 + E-01 compatibility · regional gating", 0, y);
+  kv2col(spec.browseFlow, 110);
+
+  // 03 · Purchase flow
+  y = sectionHeader(page, "03", "Purchase · 25 + 26 + S-07 + 27 · G-08 inline · G-12 timeout · paid-but-failed-provision", 0, y);
+  kv2col(spec.purchaseFlow, 130);
+
+  // 04 · Post-purchase + install
+  y = sectionHeader(page, "04", "Post-purchase · provisioning poll · 30 install guide · 28 / 29 my eSIMs / detail", 0, y);
+  kv2col(spec.postPurchase, 110);
+
+  // 05 · Top-up
+  y = sectionHeader(page, "05", "Top-up · E-02 / E-03 · same quote → PSP → 3DS path · idempotent", 0, y);
+  kv2col(spec.topUp, 110);
+
+  // 06 · Integration
+  y = sectionHeader(page, "06", "Integration · B4 catalog + B5 billing + idempotency + advisor entry + provisioning state", 0, y);
+  kv2col(spec.integration, 110);
+
+  // 07 · Tests
+  y = sectionHeader(page, "07", "Test surface · quote · idempotency · 3DS paths · timeout · provision vs install · region · advisor", 0, y);
+  fullRows(spec.tests, 56, "purple", true);
+
+  // 08 · Edge cases
+  y = sectionHeader(page, "08", "Edge cases · contract gaps to confirm before/during build", 0, y);
+  fullRows(spec.edgeCases, 64, "orange", false);
+
+  // 09 · Handoff
+  y = sectionHeader(page, "09", "Handoff to M4 / M5 / M6 · what later feature packs reuse from this purchase flow", 0, y);
+  fullRows(spec.handoff, 56, "teal", false);
+
+  // 10 · Pending
+  y = sectionHeader(page, "10", "Pending · PSP / UX / analytics decisions · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase M3 exit checklist · revenue core complete", 0, y);
   fullRows(spec.exit, 56, "teal", true);
 }
 

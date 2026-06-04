@@ -15,6 +15,7 @@ const PAGE_ORDER = [
   "■ B3 — Auth & Security",
   "■ B4 — Provider Adapters",
   "■ B5 — Billing & 3DS",
+  "■ FL — Finance & Legal",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -1197,6 +1198,77 @@ const BACKEND_PAGES = [
       "Tax + PSP + refund-policy decisions logged in Handoff · NOT blockers for sandbox build",
     ],
   },
+  {
+    name: "■ FL — Finance & Legal",
+    kind: "fl",
+    kicker: "FL · FINANCE & LEGAL · DECISIONS · CONFIG · NOT CODE · FEEDS B5",
+    title: "Finance & Legal Decisions · feeds B5",
+    subtitle: "Resolves the items B5 flagged as finance / legal · output is configuration + decisions wired into provider_configs / regional_flags / refund_policies · NOT legal / tax / financial advice — every figure researched June 2026 from secondary sources · confirm with UAE/KSA-licensed counsel + tax advisor before launch.",
+    rules: [
+      { t: "warning", v: "Disclaimer · figures researched June 2026 from secondary sources · rates · registration rules · e-invoicing mandates · App Store policy all move · counsel sign-off required pre-launch" },
+      { t: "warning", v: "Output of FL is config + decisions · NOT build instructions · wired into provider_configs · regional_flags · refund_policies · tax_rates" },
+      { t: "warning", v: "Entity / domicile resolves first · drives Stripe eligibility · drives every VAT registration obligation · drives e-invoicing scope" },
+      { t: "warning", v: "App Store channel mixing avoided · external PSP refund flow vs Apple-owned IAP refund · two paths is a support nightmare" },
+      { t: "orange",  v: "B5 PaymentProvider adapter unchanged · processor swap is config · Stripe ref for dev · regional live (Tap or PayTabs likely first) selected via provider_configs" },
+      { t: "teal",    v: "Tax data-driven · per-market rate + place-of-supply rule · KSA 15 vs UAE 5 must never be hardcoded" },
+      { t: "purple",  v: "Refund policy versioned · text + version stored · acceptance persisted on G-08 acknowledgement · payment row carries policy_version for audit" },
+      { t: "warning", v: "KSA gate stays disabled in regional_flags until written place-of-supply ruling lands · 15% exposure too large to guess" },
+    ],
+    decisions: [
+      { t: "orange",  k: "D1 · Payment processor for the Gulf",
+        v: "Stripe limited-support in UAE · regional gateways are the practical default for card + Mada/KNET/Apple Pay/STC Pay · 3DS2 mandated by UAE Central Bank · surcharging not permitted (cost out of margin) · onboarding 1–2+ weeks not guaranteed",
+        opts: "Tap (GCC · KNET/Mada/Apple Pay · token recurring) · PayTabs (multi-currency · Mada/KNET/SADAD · ~2.85% + 1 AED) · Telr (Dubai · strong bank ties) · Checkout.com (enterprise · smoothest 3DS) · Network Intl. / Amazon Payment Services (bank-backed · longest onboarding) · Stripe (best dunning · UAE limited · needs supported-country entity) · MoR (Paddle/Dodo) absorbs Gulf VAT + e-invoicing at higher %",
+        build: "Keep B0 PaymentProvider adapter · Stripe = reference dev adapter · regional live (Tap or PayTabs first) via provider_configs · re-confirm fees · recurring · onboarding directly with chosen provider before commit" },
+      { t: "warning", k: "D2 · App Store payment channel (architecture-deciding)",
+        v: "Apple guideline 3.1.5 / 3.1.3(e) · goods/services consumed outside the app must use non-IAP payment · App Review has treated eSIM/data plans as physical service → external PSP · in-app-consumed digital content has been rejected for not using IAP · review outcomes inconsistent + reviewer-dependent",
+        opts: "eSIM data plans + VoIP numbers → external PSP (forum evidence supports) · VPN as recurring digital subscription consumed in-app = ambiguous · loyalty points as standalone digital currency would lean IAP if sold directly",
+        build: "eSIM + VoIP + top-ups = external-PSP via B5 PaymentIntent/3DS · VPN decision deliberate + defended in App Review notes · do not show IAP and external pricing for the same item in same storefront without checking current entitlement rules" },
+      { t: "purple",  k: "D3 · VAT / tax per market",
+        v: "UAE 5% (FTA · EmaraTax · e-invoicing phasing through 2026) · KSA 15% (ZATCA · Fatoorah Phase 2 mandatory waves through 2026 · penalties) · Bahrain 10% (NBR) · Oman 5% (e-invoicing 2026–2028) · Qatar 0% (drafted not implemented) · Kuwait none yet (likely starts 5%)",
+        opts: "Place-of-supply genuinely ambiguous for travel connectivity · UAE rules key on use-and-enjoyment · UAE-resident on Europe eSIM uses-and-enjoys abroad · written ruling required before KSA · non-resident B2C digital → register from first sale (no threshold) · B2B reverse charge",
+        build: "Store rate + rule per-market in tax_rates / regional_flags · never hardcoded · compute + display tax on screen-25 quote per customer market + ruling · plan e-invoicing output (ZATCA Phase 2 + UAE) as real integration · MoR option in D1 absorbs e-invoicing burden" },
+      { t: "warning", k: "D4 · Refund policy & proration",
+        v: "Refund channel follows D2 · external PSP → our policy + UAE/KSA consumer-protection law · IAP → Apple owns refund · B5 already persists + versions G-08 acknowledgement · this phase supplies actual policy text · proration native (Stripe) vs manual (regional gateways often)",
+        opts: "eSIM typically non-refundable once provisioned/activated · which is exactly why B4 provision-vs-install split matters · unactivated / failed-provision auto-refund per B5 · subscription cancellation cancel-at-period-end vs immediate per B-02",
+        build: "Concrete refund policy text written + counsel-confirmed against UAE Consumer Protection + KSA equivalents · text + version in config · app renders current version + persists acceptance · regional gateway w/o native proration → implement in B5 · Stripe → inherit" },
+    ],
+    rates: [
+      { t: "orange",  k: "UAE",          v: "5%   · FTA / EmaraTax · e-invoicing being mandated · phased through 2026" },
+      { t: "warning", k: "Saudi Arabia", v: "15%  · ZATCA · Fatoorah Phase 2 mandatory in waves through 2026 · penalties for non-compliance" },
+      { t: "purple",  k: "Bahrain",      v: "10%  · National Board of Revenue" },
+      { t: "teal",    k: "Oman",         v: "5%   · Oman Tax Authority · e-invoicing phasing announced 2026–2028" },
+      { t: "purple",  k: "Qatar",        v: "0%   · drafted · not implemented" },
+      { t: "purple",  k: "Kuwait",       v: "none yet · not implemented · would likely start at 5%" },
+    ],
+    feeds: [
+      { t: "orange",  k: "provider_configs", v: "Chosen PSP(s) + credentials · sandbox / live · recurring capability flag · region routing rule" },
+      { t: "warning", k: "regional_flags · vat_rate", v: "Per-market rate · KSA 15 · UAE 5 · Bahrain 10 · Oman 5 · Qatar 0 · Kuwait none yet · data-driven" },
+      { t: "warning", k: "regional_flags · place_of_supply", v: "Rule per service type (eSIM · VoIP · VPN) · resolved per professional ruling · drives where VAT applies" },
+      { t: "purple",  k: "regional_flags · payment_channel", v: "Per product type · eSIM = external · VoIP = external · top-ups = external · VPN = decided value before iOS submission" },
+      { t: "teal",    k: "regional_flags · einvoicing_required", v: "Per market · KSA · UAE flagged · drives integration backlog or MoR adoption" },
+      { t: "orange",  k: "refund_policies", v: "Versioned text · acknowledged at G-08 · stored on payment row · counsel-reviewed wording" },
+      { t: "purple",  k: "proration_mode", v: "native (Stripe inherits) vs manual (regional · implement in B5) · per provider config" },
+    ],
+    open: [
+      "Entity / domicile · drives Stripe eligibility + every VAT registration obligation · resolve FIRST before processor or market rollout",
+      "Written place-of-supply ruling for eSIM / VoIP / VPN · especially before enabling KSA at 15% · counsel + tax advisor",
+      "E-invoicing approach · build (ZATCA Phase 2 + UAE) vs shift to Merchant of Record · MoR absorbs both at higher %",
+      "Final App Store channel call for VPN · IAP vs external · before iOS submission · documented in App Review notes",
+      "Refund policy wording · UAE Consumer Protection Law + KSA equivalents · counsel sign-off on text + version",
+      "Confirm live PSP fees · recurring support · onboarding timeline directly with chosen provider · before commit",
+    ],
+    exit: [
+      "PaymentProvider adapter wired in B0 · regional live skeleton selected · Stripe ref for dev",
+      "regional_flags extended · vat_rate · place_of_supply · payment_channel · einvoicing_required",
+      "tax_rates seeded per market · KSA 15 · UAE 5 · Bahrain 10 · Oman 5 · Qatar 0 · Kuwait null",
+      "refund_policies seeded · versioned · text + version · counsel-reviewed wording",
+      "KSA market gate stays DISABLED in regional_flags until written place-of-supply ruling lands",
+      "App Store channel decision recorded · eSIM + VoIP + top-ups = external · VPN = decided value",
+      "Proration mode set per provider · Stripe native vs regional manual",
+      "All open items logged in Handoff · counsel + tax advisor + procurement owners assigned",
+      "FL output is config + decisions · NOT code · sandbox build proceeds without these blocking",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -1230,6 +1302,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "b3") return buildBackendB3Page(page, spec);
   if (spec.kind === "b4") return buildBackendB4Page(page, spec);
   if (spec.kind === "b5") return buildBackendB5Page(page, spec);
+  if (spec.kind === "fl") return buildBackendFLPage(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -1919,6 +1992,92 @@ async function buildBackendB5Page(page, spec) {
 
   // Exit
   y = sectionHeader(page, "Exit", "Phase B5 exit checklist", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildBackendFLPage(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function decisionCard(d, cardH) {
+    const accent = ACCENT[d.t] || ACCENT.orange;
+    const card = backendCard(page, 0, y, PAGE_W, cardH, accent);
+    safeText(card, d.k, 24, 18, 14, accent, PRIMARY_FONT_BOLD, PAGE_W - 48);
+    safeText(card, "FINDING", 24, 50, 10, "#7A6058", PRIMARY_FONT_BOLD, 200);
+    safeText(card, d.v, 24, 66, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+    safeText(card, "OPTIONS / CONTEXT", 24, 152, 10, "#7A6058", PRIMARY_FONT_BOLD, 300);
+    safeText(card, d.opts, 24, 168, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+    safeText(card, "BUILD DIRECTION", 24, 254, 10, "#7A6058", PRIMARY_FONT_BOLD, 300);
+    safeText(card, d.build, 24, 270, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+    y += cardH + 12;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 00 · Non-negotiables / disclaimer
+  y = sectionHeader(page, "00", "Non-negotiables · disclaimer · scope", 0, y);
+  rules2col(spec.rules, 110);
+
+  // 01 · Decisions D1–D4
+  y = sectionHeader(page, "01", "Four decisions · finding · options · build direction", 0, y);
+  for (let i = 0; i < spec.decisions.length; i++) decisionCard(spec.decisions[i], 340);
+  y += 16;
+
+  // 02 · VAT rate table
+  y = sectionHeader(page, "02", "VAT per market · June 2026 · data-driven · confirm with counsel", 0, y);
+  kv2col(spec.rates, 70);
+
+  // 03 · Feeds back into B5
+  y = sectionHeader(page, "03", "Feeds back into B5 / data model", 0, y);
+  kv2col(spec.feeds, 90);
+
+  // 04 · Open items
+  y = sectionHeader(page, "04", "Open items · need professional confirmation before launch", 0, y);
+  fullRows(spec.open, 64, "warning", false);
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase FL exit checklist", 0, y);
   fullRows(spec.exit, 56, "teal", true);
 }
 

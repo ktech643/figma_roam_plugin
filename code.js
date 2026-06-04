@@ -14,6 +14,7 @@ const PAGE_ORDER = [
   "■ B2 — API Contract",
   "■ B3 — Auth & Security",
   "■ B4 — Provider Adapters",
+  "■ B5 — Billing & 3DS",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -1118,6 +1119,84 @@ const BACKEND_PAGES = [
       "Live provider procurement / KYC decisions logged in Handoff · not blockers for sandbox build",
     ],
   },
+  {
+    name: "■ B5 — Billing & 3DS",
+    kind: "b5",
+    kicker: "B5 · BACKEND · BILLING & 3DS · PAYMENTINTENT · WEBHOOK SOURCE-OF-TRUTH · AUTO-REFUND",
+    title: "Billing & 3DS · PaymentIntent · Webhook source-of-truth",
+    subtitle: "Maps to 25–27 purchase + S-07 3DS + 48–53 billing + B-01 add card + B-02 cancel + G-08/G-12/G-14. Money is BigInt minor + ISO 4217 · totals server-side · webhook is final · 3DS-aware everywhere · paid-but-failed-provision → auto-refund.",
+    rules: [
+      { t: "warning", v: "All amounts BigInt minor units + ISO 4217 · totals computed server-side · client-sent prices ignored" },
+      { t: "warning", v: "Payments via PaymentProvider adapter · Stripe is first concrete · zero PSP SDK in business logic · region-swappable" },
+      { t: "warning", v: "3DS / SCA assumed required · every charge uses PaymentIntent flow · requires_action returned · S-07 resolves · then confirm" },
+      { t: "warning", v: "Raw card data never reaches backend · only provider payment-method token references stored" },
+      { t: "warning", v: "Idempotency-Key required on every charge + refund · same key never double-charges · 24h replay window" },
+      { t: "warning", v: "Webhook = source of truth for final payment state · client confirmation never trusted · signed + idempotent on (provider, event_id)" },
+      { t: "warning", v: "Paid-but-provisioning-failed → automatic refund OR flagged manual-review · never charged-but-undelivered silent failure" },
+      { t: "purple",  v: "Audit on every payment · refund · subscription state change · reconcilable against provider events" },
+    ],
+    flows: [
+      { t: "orange",  k: "F1 · One-time purchase (eSIM / VoIP / top-up)", v: "25 Review (server computes line items + tax + total + G-08 refund policy v_) → POST /payments/intents (idem) → S-07 3DS if requires_action → /payments/:id confirm → webhook payment_succeeded → emit paid → B4 provisioning → 27 success" },
+      { t: "warning", k: "F2 · Payment timeout (G-12)", v: "Intent not confirmed within window → timed_out state · app surfaces retry · safe retry uses same Idempotency-Key · race-safe vs late webhook arriving after timeout" },
+      { t: "warning", k: "F3 · Paid but provision failed", v: "B4 reports failed after payment succeeded → automatic refund via PaymentProvider · OR flag manual-review per refund policy · user notified · audit row · A19 reconciliation aware" },
+      { t: "orange",  k: "F4 · Subscription create + trial", v: "POST /billing/subscription with plan + optional trial_days → trial_end + current_period_end set · webhook drives every renewal · G-14 trial-expiry event drives first-open modal" },
+      { t: "purple",  k: "F5 · Change plan (proration) + cancel (B-02)", v: "Upgrade/downgrade · proration handled by provider · cancel-at-period-end vs immediate · confirmation modal · audit · screen 51 reflects new state" },
+      { t: "orange",  k: "F6 · Add card (B-01)", v: "Setup intent · 3DS for verification if required · attach payment-method · default selection (52) · token-ref only" },
+      { t: "warning", k: "F7 · Refund (customer / admin)", v: "Reason captured · routed per persisted refund policy version · provider refund (idempotent) · status webhook drives final state · reconciles against original payment" },
+      { t: "teal",    k: "F8 · Reconciliation loop (A19)", v: "Scheduled job · internal payments/refunds vs provider events · mismatches (amount · status · missing webhook) → reconciliation_flags table · admin reviews" },
+    ],
+    methods: [
+      "createPaymentIntent({ amount, currency, idempotencyKey, customerRef, metadata }) → { intentRef, clientSecret, status }",
+      "confirmPaymentIntent(intentRef) · explicit confirm path for off-session retries",
+      "cancelPaymentIntent(intentRef) · also called by timeout job",
+      "createSetupIntent(customerRef) · for B-01 add card · 3DS verification",
+      "attachPaymentMethod / detachPaymentMethod (block detach if only PM on active sub)",
+      "createSubscription / updateSubscription / cancelSubscription · proration mode per provider",
+      "createRefund({ paymentRef, amount, reason, idempotencyKey })",
+      "listEvents(since) · pull-mode reconciliation backstop in case of dropped webhooks",
+    ],
+    tables: [
+      { t: "warning", k: "payments", v: "Adds 3ds_status enum · timed_out / requires_action / succeeded / failed / refunded · idempotency_key unique" },
+      { t: "warning", k: "subscriptions", v: "trial_end · current_period_end · canceled_at · cancel_at_period_end flag · status enum drives renewal job" },
+      { t: "warning", k: "refunds", v: "reason · amount · currency · status · provider_refund_ref · policy_version · created_at" },
+      { t: "purple",  k: "tax_lines", v: "Per invoice · region · rate · base · amount · currency (FL D3 drives values)" },
+      { t: "warning", k: "dunning_attempts (new)", v: "subscription_id · attempt_no · last_error · next_attempt_at · gives admin a clear retry trail" },
+      { t: "teal",    k: "reconciliation_flags (new)", v: "type · payment_id / refund_id · expected vs actual · resolved_at · admin notes" },
+      { t: "orange",  k: "refund_policies (versioned)", v: "Versioned policy text · acknowledged at G-08 · stored on payment row for audit" },
+      { t: "purple",  k: "webhook_events", v: "B1 already exists · enforced unique on (provider, event_id) · payload retained for replay/audit" },
+    ],
+    tests: [
+      "Idempotent charge · same Idempotency-Key replayed → no double charge · second response mirrors first",
+      "3DS requires_action path · intent returns requires_action · S-07 client confirms · webhook flips to succeeded",
+      "Webhook-confirmed success · client confirmation alone does not flip state · webhook is the gate",
+      "Payment timeout · intent ages out · timed_out state · safe retry with same idem-key · late webhook does not re-charge",
+      "Paid-but-provisioning-failed · B4 fails after webhook succeeded → auto-refund issued · user notified · audit + reconciliation row",
+      "Subscription renewal · invoice paid webhook extends period · entitlement event emitted",
+      "Subscription failed renewal · dunning_attempts row created · backoff schedule set · final attempt → cancellation",
+      "Refund reconciles · refund webhook lands · payment status updated · A19 sees zero drift",
+      "Out-of-order webhooks · later event id processed before earlier one · final state still consistent · idempotent",
+      "Currency on payment · stored currency reflects actual charge · multi-currency users see both labels",
+    ],
+    pending: [
+      "Tax / VAT handling per Gulf market (FL D3) · UAE 5 · KSA 15 · Bahrain 10 · Oman 5 · Qatar 0 · Kuwait none yet · place-of-supply ruling outstanding",
+      "Live PSP choice (FL D1) · Stripe (UAE limited) vs Tap / PayTabs / Telr / Checkout.com · MoR option (Paddle/Dodo) sidesteps tax registration · adapter stays the same",
+      "Refund policy specifics (FL D4) · eSIM non-refundable once provisioned · proration mode · partial vs full · App Store IAP vs external PSP wording",
+      "Proration rules · provider-native (Stripe) vs manual (regional PSPs) · downgrade-at-period-end vs immediate",
+      "App Store channel for VPN (FL D2) · external PSP vs IAP decision before iOS submission · loyalty IAP if sold directly",
+    ],
+    exit: [
+      "PaymentProvider adapter live · Stripe concrete + sandbox · region-swappable interface holds",
+      "3DS green in sandbox · requires_action path round-trips through S-07 · webhook confirms",
+      "Webhook is source of truth · signed + idempotent · out-of-order tolerated",
+      "Idempotent charge + refund verified · same key never double-charges",
+      "Auto-refund on paid-but-provision-failed · or flagged manual-review · never silent",
+      "Subscription create / trial / renewal / dunning / cancel green · G-14 expiry event wired",
+      "B-01 add card via setup intent · token-ref only · default selection works",
+      "A19 reconciliation job runs · reconciliation_flags surfaces drift · finance-grade",
+      "OpenAPI updated · payments + subscriptions + refunds + intents documented · 3DS state in spec",
+      "Tax + PSP + refund-policy decisions logged in Handoff · NOT blockers for sandbox build",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -1150,6 +1229,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "b2") return buildBackendB2Page(page, spec);
   if (spec.kind === "b3") return buildBackendB3Page(page, spec);
   if (spec.kind === "b4") return buildBackendB4Page(page, spec);
+  if (spec.kind === "b5") return buildBackendB5Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -1762,6 +1842,84 @@ async function buildBackendB4Page(page, spec) {
       y += cardH + 8;
     }
   }
+}
+
+async function buildBackendB5Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  // Helpers reused locally
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 00 · Non-negotiables
+  y = sectionHeader(page, "00", "Non-negotiables", 0, y);
+  rules2col(spec.rules, 110);
+
+  // 01 · Money flow + lifecycle
+  y = sectionHeader(page, "01", "Flows · money flow + subscription lifecycle + reconciliation", 0, y);
+  kv2col(spec.flows, 130);
+
+  // 02 · PaymentProvider methods
+  y = sectionHeader(page, "02", "PaymentProvider · interface surface", 0, y);
+  fullRows(spec.methods, 56, "orange", false);
+
+  // 03 · Tables touched / new
+  y = sectionHeader(page, "03", "Tables touched + new", 0, y);
+  kv2col(spec.tables, 110);
+
+  // 04 · Tests
+  y = sectionHeader(page, "04", "Test surface · sandbox", 0, y);
+  fullRows(spec.tests, 56, "purple", true);
+
+  // 05 · Pending finance / legal
+  y = sectionHeader(page, "05", "Pending · finance / legal · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase B5 exit checklist", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
 }
 
 async function buildAccessibilityPage(page) {

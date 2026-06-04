@@ -20,6 +20,7 @@ const PAGE_ORDER = [
   "■ B7 — AI Advisor",
   "■ B8 — Admin Backend",
   "■ W1 — Web Admin Frontend",
+  "■ M1 — Flutter Foundation",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -1696,6 +1697,120 @@ const BACKEND_PAGES = [
       "Ops decisions logged in Handoff · NOT code blockers · default landings + column priorities + export governance pending sign-off",
     ],
   },
+  {
+    name: "■ M1 — Flutter Foundation",
+    kind: "m1",
+    kicker: "M1 · MOBILE · FLUTTER FOUNDATION · THEME · API CLIENT · ROUTING · AUTH/SESSION · NO FEATURE SCREENS",
+    title: "Flutter Foundation · theme · API · auth · shell",
+    subtitle: "First mobile phase. Project structure · BrandGuide v2 theme (light + dark + RTL day-1) · generated Dart client · auth/session state machine · 4-tab shell (Home / eSIM / Connect / Account · AI is entry-point NOT a tab). M2–M6 feature packs build on this · NO product feature screens here.",
+    rules: [
+      { t: "warning", v: "Dart API client GENERATED from B2/backend OpenAPI · zero hand-written models · regenerate on contract change · no drift" },
+      { t: "warning", v: "Theme tokens are SAME values as BrandGuide v2 / Figma · do NOT re-pick colors · widgets reference tokens · NEVER raw hex" },
+      { t: "warning", v: "Light AND dark first-class day-1 · light bg #FFF8F4 · dark bg #181210 · every themed surface supports both" },
+      { t: "warning", v: "RTL + Arabic first-class · NOT afterthought · full RTL mirroring via Directionality · Cairo font for Arabic (DM Sans no Arabic) · numbers/prices stay LTR inside Arabic" },
+      { t: "warning", v: "Bottom nav EXACTLY Home / eSIM / Connect / Account · 4 tabs · AI is entry-point feature NOT a tab · Connect contains BOTH VoIP + VPN" },
+      { t: "orange",  v: "Money is integer-minor + currency from API · format per currency/locale · NEVER reconstruct amounts client-side" },
+      { t: "warning", v: "No secrets in app · model/provider keys server-side ONLY · auth tokens in secure storage (Keychain/Keystore) · NEVER plain prefs" },
+      { t: "purple",  v: "Reduced-motion respected · haptics: VPN connected=heavy · payment/eSIM success=success · wrong OTP=error · primary tap=light · sheet snap=medium" },
+    ],
+    architecture: [
+      { t: "orange",  k: "Flutter project layout",  v: "Feature-first folders · core/ · theme/ · api/ · routing/ · features/<area>/ · domain models in core · feature packs M2–M6 each own a folder" },
+      { t: "orange",  k: "State management",        v: "Riverpod (preferred) used CONSISTENTLY · state testable · UI declarative · providers per feature · async notifiers for API state" },
+      { t: "warning", k: "Localization l10n",       v: "Flutter intl · en + ar ARB files · runtime locale switch · persisted preference · default Arabic for Gulf locale per onboarding rules" },
+      { t: "purple",  k: "Environment config",      v: "dev / staging / prod · base URL + feature flags · NO secrets committed · loaded at app boot · environment banner in non-prod" },
+      { t: "teal",    k: "Generated Dart client",   v: "openapi-generator dart-dio against B2 OpenAPI · types + endpoints regen via melos/script · pinned version" },
+      { t: "warning", k: "Secure storage",          v: "flutter_secure_storage · Keychain (iOS) · Keystore (Android) · access + refresh tokens · biometric keypair · NEVER SharedPreferences for secrets" },
+    ],
+    theme: [
+      { t: "orange",  k: "Color tokens · light + dark", v: "brand orange/teal/purple · bg app/surface/surface-2 · border · text primary/secondary/disabled · semantic success/warning/error · exact BrandGuide v2 values" },
+      { t: "orange",  k: "Brand role separation",       v: "orange = CTAs · teal = VPN / security · purple = AI · enforced in component variants · widgets pick role not color" },
+      { t: "warning", k: "Typography · LTR",             v: "DM Serif Display (display italic 36/43.2) · DM Sans (h1 28/36.4 · h2 22/30.8 · h3 17/23.8 · body 15/22.5 · label 13/19.5) · JetBrains Mono (mono price/code)" },
+      { t: "warning", k: "Typography · RTL",             v: "Cairo for ALL Arabic text (DM Sans does not support Arabic) · same scale · numbers + prices stay LTR via Directionality.embed" },
+      { t: "purple",  k: "Spacing scale",                v: "4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 · token file · widgets reference Spacing.md not literals" },
+      { t: "purple",  k: "Radius + icon scale",          v: "Radius xs/sm/md/lg/xl/pill/circle · Icon 16/20/24 · token file drives ThemeData" },
+      { t: "teal",    k: "ThemeData light + dark",       v: "Two ThemeData built from same tokens · MaterialApp.themeMode follows system + user override · seamless switch" },
+      { t: "teal",    k: "RTL mirroring",                v: "Directionality.of context-aware · padding/margin use start/end NOT left/right · icons mirror where directional · bottom-nav reversed in RTL" },
+    ],
+    apiLayer: [
+      { t: "orange",  k: "Generated client + repos",     v: "Dart client wrapped by feature repositories · widgets never call client directly · repos return Result<T, ApiError>" },
+      { t: "warning", k: "Auth interceptor",             v: "Attaches Bearer access token · forwards request_id · forwards Idempotency-Key when set · refuses unauthenticated calls to protected paths" },
+      { t: "warning", k: "Refresh interceptor",          v: "401 → silent refresh via rotation token · single-flight to avoid stampede · success retries original · failure forces re-auth + clears storage" },
+      { t: "warning", k: "Error envelope mapping",       v: "B0 { error: { code, message, details } } → typed ApiError class · widgets switch on code · raw exceptions never reach UI" },
+      { t: "purple",  k: "Idempotency-Key generation",   v: "UUID v4 generated for every payment / provisioning POST · stored on the in-flight request · same key reused on retry · 24h TTL aware" },
+      { t: "teal",    k: "Result + ApiError surface",    v: "Result.success(T) | Result.failure(ApiError) · UI maps codes to messages · 422 details flow into form fields · 5xx triggers retry banner" },
+    ],
+    auth: [
+      { t: "warning", k: "Session state machine",        v: "loggedOut → pendingVerification → twoFactorChallenge → active → locked · transitions auditable · persisted minimal · drives router redirects" },
+      { t: "warning", k: "Token storage + rotation",     v: "Access + refresh in flutter_secure_storage · refresh rotation respected · reuse-detection from B3 · device-bound where supported" },
+      { t: "purple",  k: "Biometric unlock hook",        v: "Device keypair signs server challenge · convenience OVER existing session · NOT standalone identity · falls back to pwd if not enrolled" },
+      { t: "purple",  k: "Step-up trigger",              v: "Sensitive actions (refund · payment · plan change) require fresh auth · biometric or password challenge · token age checked" },
+      { t: "warning", k: "Idle-timeout · session lock S-06", v: "Configurable window · 5 / 15 min · last-activity tracked at shell · timer locks UI · re-auth preserves route" },
+    ],
+    shell: [
+      { t: "warning", k: "Router · auth-aware guards",   v: "go_router · routes guarded by session state · loggedOut → onboarding/auth · active → main shell · deep-link landing respects auth state (G-04 deferred until authed)" },
+      { t: "warning", k: "Bottom nav · 4 tabs",          v: "Home / eSIM / Connect / Account · EXACTLY four · AI is entry-point NOT a tab · order REVERSED in RTL · active state colored per token" },
+      { t: "purple",  k: "Connect tab",                  v: "Contains BOTH VoIP + VPN · sub-segmented control inside the tab · AI advisor entry-point lives on Home + contextual entries" },
+      { t: "teal",    k: "Connectivity + system states", v: "Shell-level overlays · no-internet (G-02) · maintenance mode (G-03 from admin A17) · captive portal banner (G-10) · VPN reconnecting (G-11) · over live screens not blocking" },
+      { t: "orange",  k: "Environment banner",           v: "Non-prod environments show top banner · sandbox / staging colored · 'wait was that prod' prevention" },
+    ],
+    primitives: [
+      { t: "orange",  k: "Buttons",            v: "Primary (orange) · Secondary (outlined) · Ghost (text only) · loading + disabled states · 44pt min target · haptic light on tap" },
+      { t: "orange",  k: "Inputs",             v: "Text · password (with show/hide) · phone (Gulf-first country picker · default UAE/KSA) · OTP (6-digit · auto-advance · paste-aware) · validation surfaces from API details[]" },
+      { t: "purple",  k: "Cards · Badges",     v: "Card 12px radius · token shadows · Badges semantic colored · regional badge for market · all light/dark/RTL ready" },
+      { t: "teal",    k: "Bottom sheet",       v: "Snap points (peek/half/full) · drag handle · haptic medium on snap · dismissable · respects safe area + keyboard" },
+      { t: "purple",  k: "Toggles · Progress", v: "Switch · Checkbox · Radio · Progress ring (data usage · provisioning) · Shimmer skeleton · all token-driven" },
+      { t: "warning", k: "Banner / Alert",     v: "Inline banner (warning / error / info) · sticky at top of screen · dismissable where appropriate · used by G-02 / G-10 / G-11" },
+      { t: "warning", k: "Biometric prompt",   v: "Platform-native prompt · falls back to password · respects enrollment state · used by step-up + login" },
+      { t: "teal",    k: "Error / Empty state", v: "Illustrated empty (no orders · no eSIMs) · error with retry · loading skeleton · token-driven · reduced-motion variant" },
+    ],
+    verification: [
+      "Tokens match BrandGuide v2 exactly · roam-orange E05820 · roam-teal 10A890 · roam-purple 8040D0 · light bg FFF8F4 · dark bg 181210 · all 13 paint tokens verified",
+      "Dark mode renders on every primitive · contrast AA verified · no hardcoded white/black anywhere",
+      "RTL mirrors correctly · bottom nav reverses · padding start/end not left/right · numbers stay LTR inside Arabic strings",
+      "Cairo font loads for ar locale · DM Sans for en · runtime locale switch works without restart",
+      "Generated client compiles · regen against B2 OpenAPI produces zero diff against committed client when contract unchanged",
+      "Auth interceptor attaches Bearer · refresh interceptor single-flights 401 · failure forces re-auth · tested with mocked 401",
+      "Idempotency-Key generated on payment POST · same key on retry · server idempotency confirmed in B5 sandbox",
+      "Session lock S-06 · 15 min idle → lock screen · re-auth preserves route · biometric step-up works on enrolled devices",
+      "Bottom nav has EXACTLY 4 items · AI is NOT a tab · Connect contains both VoIP + VPN · order reverses in RTL",
+      "Connectivity overlays · airplane mode → G-02 banner · maintenance toggle → G-03 · simulated captive portal → G-10",
+      "Reduced-motion respected · animations replaced with cross-fades · haptics fire per accessibility map",
+      "Secure storage verified · tokens NOT in SharedPreferences · uninstall clears via Keychain wipe (iOS) · keystore wipe (Android)",
+    ],
+    handoff: [
+      "M2 Onboarding + Auth · uses session state machine + auth interceptor + OTP input + biometric prompt + RTL onboarding",
+      "M3 eSIM · uses generated client esim endpoints + Idempotency-Key + provisioning state UI + Connect tab content",
+      "M4 VoIP + VPN (Connect tab) · uses Connect sub-segmented control + biometric step-up for activation + G-07 VPN consent flow",
+      "M5 Billing + Loyalty + AI Advisor · uses payment Idempotency-Key + 3DS modal + AI entry-point widgets + recommendation card primitive",
+      "M6 Account + Notifications + System states · uses Account tab + push registration + G-02/G-03 overlays + locale + theme settings",
+      "Contract gaps to resolve before feature work · streaming SSE for AI advisor (B7) · push token registration shape · session lock TTL config",
+    ],
+    pending: [
+      "State management final pick · Riverpod (preferred) vs Bloc · whichever is consistent across team · decided before M2",
+      "Localization default · Arabic-default for Gulf locale per onboarding rule · confirm market-detection fallback when locale ambiguous",
+      "Idle-timeout window · 5 vs 15 min · per-feature variation (finance step-up tighter) · UX team sign-off",
+      "Biometric scope · login-only vs step-up-only vs both · device keypair rotation cadence",
+      "Deep-link landing rules · which links survive logged-out state (G-04) · auth-required vs public deep links",
+      "Theme switching UX · system-follow vs explicit override default · onboarding theme picker or auto",
+      "Font licensing for Cairo + DM Serif Display + DM Sans confirmed for app distribution",
+    ],
+    exit: [
+      "Flutter project scaffolded · feature-first layout · core/theme/api/routing/features folders",
+      "Riverpod (or chosen) wired consistently · state testable · widgets declarative",
+      "Theme layer live · light + dark + RTL · all 13 paint tokens + type scale + spacing + radius + icon scale",
+      "Cairo + DM Sans + DM Serif Display + JetBrains Mono fonts loaded · Arabic renders correctly",
+      "Generated Dart client wired · pnpm/melos gen:api regenerates against B2 OpenAPI · pinned version",
+      "Auth + refresh interceptors live · 401 silent-refresh single-flight · refresh failure forces re-auth",
+      "Error envelope mapped to typed ApiError · 422 details flow to form fields · 5xx retry banner",
+      "Session state machine green · loggedOut → pendingVerification → 2FA → active → locked transitions tested",
+      "Secure storage verified · tokens never in plain prefs · biometric keypair stored device-bound",
+      "Router with auth guards · 4-tab bottom nav · Connect contains VoIP + VPN · AI is NOT a tab · RTL reverses",
+      "Connectivity + system overlays wired · G-02 / G-03 / G-10 / G-11 ready for feature packs",
+      "Foundation widget set complete · buttons / inputs / cards / sheet / toggles / progress / shimmer / banner / biometric / empty · all token-driven · light/dark/RTL/reduced-motion ready",
+      "M2–M6 feature packs can build on this foundation · no foundation rework required",
+      "Decisions logged in Handoff · NOT code blockers · feature work proceeds",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -1734,6 +1849,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "b7") return buildBackendB7Page(page, spec);
   if (spec.kind === "b8") return buildBackendB8Page(page, spec);
   if (spec.kind === "w1") return buildBackendW1Page(page, spec);
+  if (spec.kind === "m1") return buildBackendM1Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -2896,6 +3012,99 @@ async function buildBackendW1Page(page, spec) {
 
   // Exit
   y = sectionHeader(page, "Exit", "Phase W1 exit checklist · first client phase", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildBackendM1Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 00 · Non-negotiables
+  y = sectionHeader(page, "00", "Non-negotiables · generated client · tokens · light/dark/RTL · 4-tab nav · secure storage", 0, y);
+  rules2col(spec.rules, 110);
+
+  // 01 · Architecture
+  y = sectionHeader(page, "01", "Architecture · stack · state mgmt · l10n · env · client gen · secure storage", 0, y);
+  kv2col(spec.architecture, 110);
+
+  // 02 · Theme layer
+  y = sectionHeader(page, "02", "Theme layer · BrandGuide v2 tokens · light + dark + RTL · Cairo for Arabic", 0, y);
+  kv2col(spec.theme, 110);
+
+  // 03 · API + data layer
+  y = sectionHeader(page, "03", "API + data layer · interceptors · refresh rotation · idempotency · typed errors", 0, y);
+  kv2col(spec.apiLayer, 110);
+
+  // 04 · Auth + session
+  y = sectionHeader(page, "04", "Auth + session plumbing · state machine · biometric · step-up · idle lock S-06", 0, y);
+  kv2col(spec.auth, 110);
+
+  // 05 · App shell + routing
+  y = sectionHeader(page, "05", "App shell + routing · 4-tab bottom nav · Connect = VoIP + VPN · AI is NOT a tab", 0, y);
+  kv2col(spec.shell, 110);
+
+  // 06 · Foundation widgets
+  y = sectionHeader(page, "06", "Foundation widgets · token-driven · light/dark/RTL/reduced-motion ready", 0, y);
+  kv2col(spec.primitives, 110);
+
+  // 07 · Verification
+  y = sectionHeader(page, "07", "Verification · tokens match · dark + RTL render · primitives exist · interceptors green", 0, y);
+  fullRows(spec.verification, 56, "purple", true);
+
+  // 08 · Handoff to M2–M6
+  y = sectionHeader(page, "08", "Handoff to M2–M6 · what each feature pack inherits from this foundation", 0, y);
+  fullRows(spec.handoff, 64, "orange", false);
+
+  // 09 · Pending
+  y = sectionHeader(page, "09", "Pending · product / UX decisions · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase M1 exit checklist · first mobile phase", 0, y);
   fullRows(spec.exit, 56, "teal", true);
 }
 

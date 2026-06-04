@@ -18,6 +18,7 @@ const PAGE_ORDER = [
   "■ FL — Finance & Legal",
   "■ B6 — Loyalty & Referrals",
   "■ B7 — AI Advisor",
+  "■ B8 — Admin Backend",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -1446,6 +1447,138 @@ const BACKEND_PAGES = [
       "Business decisions logged in Handoff · NOT code blockers · sandbox build proceeds with placeholder model",
     ],
   },
+  {
+    name: "■ B8 — Admin Backend",
+    kind: "b8",
+    kicker: "B8 · BACKEND · ADMIN BACKEND · A00–A19 · SEPARATE AUTH REALM · RBAC · APPEND-ONLY AUDIT · LAST BACKEND PHASE",
+    title: "Admin Backend · A00–A19 · /api/v1/admin",
+    subtitle: "Last backend phase · powers React admin portal (W1) · separate auth realm from mobile users · every endpoint declares a permission · every mutation is audited · audit log is append-only and immutable.",
+    rules: [
+      { t: "warning", v: "Admin auth is SEPARATE realm · admin_users table · different token audience · no cross-login with mobile users · reuses B3 primitives (Argon2id · refresh rotation · 2FA) independently" },
+      { t: "warning", v: "RBAC on EVERY endpoint · explicit required permission · roles → permissions via role_permissions · no 'any logged-in admin' access · least privilege by default" },
+      { t: "warning", v: "Append-only audit log on EVERY mutation · actor · action · entity · entity_id · before/after snapshot · timestamp · request_id · NEVER editable or deletable even by super-admin" },
+      { t: "warning", v: "PII access is itself audited + permissioned · viewing user's full profile / payment data writes a pii_access_log row" },
+      { t: "warning", v: "Sensitive infra (provider credentials · VPN server keys · pricing) gated to narrowest role · NEVER returned in full · mask secrets · last-4 / presence only" },
+      { t: "orange",  v: "Money is integer minor units + currency · all financial views reconcile to underlying ledgers · NEVER recompute independently · cache for perf · source-of-truth stays the table" },
+      { t: "warning", v: "Destructive / financial actions (refund · point adjustment · release number · force re-provision · pricing change) need permission AND detailed audit entry · high-risk → approval/confirmation step" },
+      { t: "purple",  v: "Aggregates / analytics computed from source tables · cache layer allowed · never store divergent numbers as truth · always reconcilable to ledgers" },
+    ],
+    flows: [
+      { t: "warning", k: "F1 · Admin login (A00)", v: "Separate /admin/auth/login · 2FA mandatory · Argon2id verify · short-access + refresh rotation · token audience=admin · refused on mobile-user creds" },
+      { t: "warning", k: "F2 · Permission gate", v: "Every controller method declares @RequirePermission · guard checks admin_user role → role_permissions → permission set · 403 FORBIDDEN with permission name in details" },
+      { t: "warning", k: "F3 · Audit interceptor", v: "Every mutating endpoint wrapped · captures before-snapshot · runs handler · captures after-snapshot · writes audit_log row · failure to write audit FAILS the request" },
+      { t: "purple",  k: "F4 · PII access logged (A03)", v: "Viewing user full profile / payment / addresses → pii_access_log row · admin_id · target_user_id · fields_viewed[] · request_id · queryable by user for transparency" },
+      { t: "warning", k: "F5 · Refund / adjustment / re-provision", v: "Permission gated · approval threshold for high-amount · audit row with reason required · routes through B5 (refund) / B6 (adjustment) / B4 (re-provision) · never side-channels" },
+      { t: "teal",    k: "F6 · Pricing change versioning (A09)", v: "Price update → new pricing version row · effective_from · old version retained · existing quotes reference frozen version · audit captures admin + before/after" },
+      { t: "purple",  k: "F7 · Maintenance mode toggle (A17)", v: "regional_flags.maintenance_mode flipped → client G-03 maintenance state surfaces · audited · scope (global vs region) · timed window optional" },
+      { t: "teal",    k: "F8 · Reconciliation drill-down (A19)", v: "B5 reconciliation_flags surfaced · drill into payment / refund · resolve-with-audit · finance-grade · read + resolve · NEVER edit underlying ledger" },
+    ],
+    screens: [
+      { t: "warning", k: "A00 · Admin Login",            v: "Separate realm · 2FA · ADMIN_AUTH · permission: public" },
+      { t: "warning", k: "A18 · Admin Users",            v: "CRUD admins · assign roles · permission: admin.users.manage · audited · super-admin only for role create" },
+      { t: "purple",  k: "A01 · Dashboard Overview",     v: "KPIs from real aggregates · active users · orders · revenue · sessions · cached · permission: admin.dashboard.view" },
+      { t: "purple",  k: "A02 · Users List",             v: "Search · filter · pagination · permission: admin.users.list · base profile only · no PII" },
+      { t: "warning", k: "A03 · User Detail",            v: "Orders · eSIMs · numbers · subscriptions · loyalty ledger · sessions · PII access audited · actions: suspend · revoke sessions · trigger pwd reset · permission: admin.users.read.pii" },
+      { t: "teal",    k: "A04 · eSIM Orders",            v: "List/filter · provisioning state · manual re-provision · refund · permission: admin.esim.manage · routes through B4/B5 · audited" },
+      { t: "teal",    k: "A05 · VoIP Numbers",           v: "Inventory · reserved → active → released · release with audit · permission: admin.voip.manage" },
+      { t: "teal",    k: "A06 · VPN Sessions",           v: "Active + historical · server load · permission: admin.vpn.read" },
+      { t: "warning", k: "A07 · Revenue Analytics",      v: "Aggregates over payments/subscriptions · by product · market · period · reconcile to ledger · permission: admin.finance.view" },
+      { t: "orange",  k: "A08 · Subscription Plans",     v: "Plan CRUD · regional availability · permission: admin.catalog.manage · price-change versioned" },
+      { t: "warning", k: "A09 · Pricing Management",     v: "Versioned price changes · audit before/after · effective_from · respects FL D3 tax + regional_flags · permission: admin.pricing.manage" },
+      { t: "warning", k: "A10 · Provider Config",        v: "eSIM/VoIP/VPN/payment/model adapters · enable/disable · sandbox-vs-live · credentials WRITE-ONLY + masked · permission: admin.providers.manage · highly gated" },
+      { t: "warning", k: "A11 · VPN Server Management",  v: "Add/enable/disable servers · capacity · credentials masked · routes through B4 VpnProvider · permission: admin.vpn.manage" },
+      { t: "purple",  k: "A12 · Loyalty & Points",       v: "View ledgers · manual adjustment with reason + audit · edit earn/redeem config from B6 · permission: admin.loyalty.manage" },
+      { t: "purple",  k: "A13 · Referral Program",       v: "Review flagged referrals · approve/reject (writes ledger entries) · config · permission: admin.referrals.manage" },
+      { t: "purple",  k: "A14 · Marketing Campaigns",    v: "Compose · target by segment · schedule · permission: admin.marketing.manage · calls notifications module" },
+      { t: "orange",  k: "A15 · Support Tickets",        v: "List · assign · respond · status lifecycle · permission: admin.support.handle" },
+      { t: "orange",  k: "A16 · Notifications Center",   v: "Compose · target segment · schedule · push + sms + email via B4 adapters · permission: admin.notifications.send" },
+      { t: "warning", k: "A17 · App Settings",           v: "Feature flags · regional_flags · maintenance_mode toggle · permission: admin.settings.manage · audited" },
+      { t: "warning", k: "A19 · Revenue Reconciliation", v: "B5 reconciliation_flags surface · drill-down · resolve-with-audit · finance-grade · permission: admin.finance.reconcile" },
+    ],
+    tables: [
+      { t: "warning", k: "admin_users", v: "id · email · password_hash (Argon2id) · totp_secret · status · last_login_at · created_at · SEPARATE from users table" },
+      { t: "warning", k: "admin_sessions", v: "Refresh-token rotation · audience=admin · device + ip · revocable · reuse-detection from B3" },
+      { t: "warning", k: "roles + role_permissions", v: "B1 already declares · roles like super_admin · finance · support · ops · marketing · permissions like admin.refund.issue" },
+      { t: "warning", k: "audit_log (append-only)", v: "id · admin_id · action · entity · entity_id · before (jsonb) · after (jsonb) · request_id · created_at · NO update / delete grants in DB role" },
+      { t: "purple",  k: "pii_access_log", v: "admin_id · target_user_id · fields_viewed[] · request_id · created_at · user-facing transparency report queryable" },
+      { t: "warning", k: "pricing_versions", v: "plan_ref · version · price (minor + currency) · effective_from · created_by · audited on insert · old versions retained forever" },
+      { t: "teal",    k: "support_tickets", v: "id · user_id · subject · status · assignee_admin_id · last_message_at · timeline" },
+      { t: "purple",  k: "campaigns", v: "id · segment_query · channel · scheduled_at · status · created_by · audited · routes through notifications module" },
+    ],
+    endpoints: [
+      "POST   /admin/auth/login            · admin.public · 2FA mandatory · token audience=admin",
+      "POST   /admin/auth/refresh          · admin.public · refresh rotation · reuse-detection",
+      "GET    /admin/dashboard             · admin.dashboard.view · KPIs from aggregates · cached",
+      "GET    /admin/users                 · admin.users.list · pagination + filter · base profile",
+      "GET    /admin/users/:id             · admin.users.read.pii · writes pii_access_log · full detail",
+      "POST   /admin/users/:id/suspend     · admin.users.manage · audited · revokes sessions",
+      "GET    /admin/orders/esim           · admin.esim.manage · list + filter · provisioning state",
+      "POST   /admin/orders/:id/reprovision · admin.esim.manage · audited · routes through B4 · approval gate",
+      "POST   /admin/orders/:id/refund     · admin.refund.issue · audited · routes through B5 · approval threshold",
+      "GET    /admin/voip/numbers          · admin.voip.manage · inventory · lifecycle state",
+      "POST   /admin/voip/numbers/:id/release · admin.voip.manage · audited",
+      "GET    /admin/vpn/sessions          · admin.vpn.read · active + historical",
+      "POST   /admin/vpn/servers           · admin.vpn.manage · audited · credentials masked on read",
+      "GET    /admin/finance/revenue       · admin.finance.view · aggregates · reconcile to ledger",
+      "GET    /admin/finance/reconcile     · admin.finance.reconcile · reconciliation_flags from B5",
+      "POST   /admin/finance/reconcile/:id/resolve · admin.finance.reconcile · audited",
+      "GET    /admin/catalog/plans         · admin.catalog.manage",
+      "PATCH  /admin/catalog/plans/:id     · admin.catalog.manage · audited",
+      "POST   /admin/pricing               · admin.pricing.manage · creates new version · audited · effective_from",
+      "GET    /admin/providers             · admin.providers.manage · credentials masked",
+      "PATCH  /admin/providers/:id         · admin.providers.manage · write-only credentials · audited",
+      "GET    /admin/loyalty/users/:id     · admin.loyalty.manage · ledger view",
+      "POST   /admin/loyalty/adjust        · admin.loyalty.manage · audited · reason required · routes through B6",
+      "GET    /admin/referrals/flagged     · admin.referrals.manage · review queue",
+      "POST   /admin/referrals/:id/approve · admin.referrals.manage · audited · writes ledger via B6",
+      "POST   /admin/marketing/campaigns   · admin.marketing.manage · audited",
+      "GET    /admin/support/tickets       · admin.support.handle",
+      "POST   /admin/support/tickets/:id/respond · admin.support.handle · audited",
+      "POST   /admin/notifications/send    · admin.notifications.send · audited · routes through B4 push/sms",
+      "PATCH  /admin/settings              · admin.settings.manage · audited · drives client G-03",
+      "GET    /admin/admins                · admin.users.manage · list admins",
+      "POST   /admin/admins                · admin.users.manage · audited · super-admin for role create",
+      "GET    /admin/audit                 · admin.audit.read · paginated · filter by entity / actor / range · NEVER returns mutations",
+    ],
+    tests: [
+      "Permission enforcement · admin without admin.refund.issue → 403 FORBIDDEN · permission name in details · audit row NOT written for failed auth",
+      "Audit entry on every mutation · refund / adjustment / pricing / suspend / re-provision all write audit_log with before+after snapshots",
+      "Audit immutability · attempt to UPDATE audit_log → DB-level grant denies · attempt to DELETE → denied · super-admin no exception",
+      "PII access logged · GET /admin/users/:id → pii_access_log row written · admin_id + target_user_id + fields_viewed[] · transparency report visible",
+      "Secret masking · GET /admin/providers returns provider config with credentials masked · last-4 only · raw never serialized · write-only path verified",
+      "Pricing change versioned · PATCH price → new pricing_versions row · old version retained · in-flight quote still references old version (not retroactive)",
+      "Analytics reconciles · /admin/finance/revenue total for period equals SUM(payments) for same period · cache invalidation tested",
+      "Reconciliation drill-down · reconciliation_flag resolved → audit row written · underlying payment row UNCHANGED · resolution metadata only",
+      "Cross-realm refusal · mobile-user JWT presented to /admin/* → 401 · admin JWT presented to /api/v1/users/me → 401 · audience separation enforced",
+      "2FA mandatory · admin login without TOTP → 401 · password-only path doesn't exist",
+      "Maintenance mode · PATCH /admin/settings flips regional_flags · audited · client G-03 surfaces on next read",
+      "Loyalty manual adjustment · routes through B6 ledger · negative entry not allowed without reason · audit + loyalty_audit both written",
+      "Approval-threshold gate · refund > threshold without approver → 409 APPROVAL_REQUIRED · with approver_id → succeeds + audited as two-party",
+      "List endpoint pagination · all admin lists honor cursor pagination from B2 · server-side filter/sort · export endpoints write audit row",
+    ],
+    pending: [
+      "Exact role / permission matrix · who can refund · adjust loyalty · change pricing · view PII · ops + finance + legal sign-off · per-region variation possible",
+      "Approval thresholds for high-risk actions · refund amount · loyalty adjustment magnitude · pricing change scope · two-party requirement",
+      "Data-export governance · who can export user lists / payment lists · row caps · purpose-of-use logged · GDPR / KSA / UAE law alignment",
+      "Audit-log retention · 7 years for finance · indefinite for compliance-sensitive actions · partition + archive strategy",
+      "PII transparency report cadence · whether end-users can request their pii_access_log · per regional consumer-protection law",
+      "Maintenance-mode coordination · who can flip · scope (global vs region) · pre-announce SLA · paging implications",
+      "Super-admin distribution · how many · break-glass procedure · audit on super-admin self-grant",
+    ],
+    exit: [
+      "Admin auth realm separate · 2FA enforced · token audience verified · cross-realm refusals tested",
+      "Every endpoint declares a permission · least-privilege denials covered · 403 includes permission name",
+      "Audit interceptor live · writes audit_log on every mutation · failure to write FAILS the request",
+      "Audit log immutable at DB grant level · super-admin no exception · partition / archive plan documented",
+      "PII access log live · A03 view writes a row · transparency endpoint exists",
+      "Secret masking verified · provider credentials never serialized in full · write-only paths green",
+      "Pricing versioning live · old quotes pinned · audit captures before/after",
+      "Reconciliation drill-down + resolve-with-audit · ledgers untouched by resolution",
+      "All A00–A19 endpoints implemented · OpenAPI admin namespace published · React admin (W1) generates against it",
+      "Approval-threshold gate behind config · high-risk actions covered · two-party path tested",
+      "Policy decisions logged in Handoff · NOT code blockers · sandbox build proceeds",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -1482,6 +1615,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "fl") return buildBackendFLPage(page, spec);
   if (spec.kind === "b6") return buildBackendB6Page(page, spec);
   if (spec.kind === "b7") return buildBackendB7Page(page, spec);
+  if (spec.kind === "b8") return buildBackendB8Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -2449,6 +2583,104 @@ async function buildBackendB7Page(page, spec) {
 
   // Exit
   y = sectionHeader(page, "Exit", "Phase B7 exit checklist", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildBackendB8Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+  function endpointsBlock(items, cardH) {
+    for (let i = 0; i < items.length; i++) {
+      const line = items[i];
+      const m = line.match(/^(GET|POST|PATCH|PUT|DELETE)\s+(\S+)\s+·\s+(.*)$/);
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT.teal);
+      if (m) {
+        const tone = METHOD_TONE[m[1]] || ACCENT.teal;
+        safeText(card, m[1], 24, 18, 12, tone, PRIMARY_FONT_BOLD, 80);
+        safeText(card, m[2], 110, 18, 12, "#1C0804", PRIMARY_FONT_BOLD, 460);
+        safeText(card, m[3], 580, 18, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 604);
+      } else {
+        safeText(card, line, 24, 18, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 00 · Non-negotiables
+  y = sectionHeader(page, "00", "Non-negotiables · separate realm · RBAC · append-only audit · masking", 0, y);
+  rules2col(spec.rules, 110);
+
+  // 01 · Flows
+  y = sectionHeader(page, "01", "Flows · login · permission gate · audit · PII · approvals · maintenance · reconciliation", 0, y);
+  kv2col(spec.flows, 130);
+
+  // 02 · Screens A00–A19
+  y = sectionHeader(page, "02", "Screens A00–A19 · permission per screen · audit on every mutation", 0, y);
+  kv2col(spec.screens, 100);
+
+  // 03 · Tables
+  y = sectionHeader(page, "03", "Tables · admin realm · audit · PII log · pricing versions", 0, y);
+  kv2col(spec.tables, 110);
+
+  // 04 · Endpoints
+  y = sectionHeader(page, "04", "Endpoints · /api/v1/admin namespace · permission name in column 3", 0, y);
+  endpointsBlock(spec.endpoints, 56);
+
+  // 05 · Tests
+  y = sectionHeader(page, "05", "Test surface · permissions · audit · masking · reconciliation", 0, y);
+  fullRows(spec.tests, 56, "purple", true);
+
+  // 06 · Pending
+  y = sectionHeader(page, "06", "Pending · ops / business / legal decisions · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase B8 exit checklist · last backend phase", 0, y);
   fullRows(spec.exit, 56, "teal", true);
 }
 

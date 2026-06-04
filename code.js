@@ -17,6 +17,7 @@ const PAGE_ORDER = [
   "■ B5 — Billing & 3DS",
   "■ FL — Finance & Legal",
   "■ B6 — Loyalty & Referrals",
+  "■ B7 — AI Advisor",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -1353,6 +1354,98 @@ const BACKEND_PAGES = [
       "Business decisions logged in Handoff · NOT code blockers · sandbox build proceeds with placeholder economics",
     ],
   },
+  {
+    name: "■ B7 — AI Advisor",
+    kind: "b7",
+    kicker: "B7 · BACKEND · AI ADVISOR · GROUNDED RECOMMENDATIONS · MODELPROVIDER ADAPTER · ENTRY-POINT NOT TAB",
+    title: "AI Advisor · grounded · explainable · routes to B5",
+    subtitle: "Maps to 44–47 (chat welcome / active · recommendation card · advisor history). Entry-point feature · NOT a bottom-nav tab. Reasoning layer over live catalog · model never invents plans/prices · accept routes into the B5 quote → payment → B4 provisioning path.",
+    rules: [
+      { t: "warning", v: "Model NEVER invents catalog · prices · availability · plans/prices/coverage come from live esim_plans / voip_plans · model is reasoning + explanation only" },
+      { t: "warning", v: "Recommendations are EXPLAINABLE · candidate set + rationale persisted · why this plan surfaced to user (per Figma intent)" },
+      { t: "warning", v: "Model called via ModelProvider adapter · vendor/version swappable via config · never imported into business logic · API key server-side ONLY" },
+      { t: "warning", v: "Region gating still applies · regional_flags respected · disabled markets never recommended · VoIP/VPN availability rules honored" },
+      { t: "warning", v: "Recommendation = suggestion · NOT a charge · accept routes to normal B5 quote → payment → B4 provisioning · Advisor never provisions or charges directly" },
+      { t: "orange",  v: "Cost + abuse control · per-user rate-limit · context size cap · token cap per request · usage logged (tokens · latency · cost) for B8 admin" },
+      { t: "purple",  v: "Safety + privacy · PII redacted before model payload · only what's needed for recommendation sent · persistence limited to history + explainability" },
+      { t: "teal",    v: "Structured-output validation · every plan id from model checked against live catalog · invalid → drop or repair · NEVER surface hallucinated plan" },
+    ],
+    flows: [
+      { t: "orange",  k: "F1 · Grounded recommendation", v: "User intent (destination · trip length · expected data · calls/VPN need) → deterministic catalog retrieval → candidate set → ModelProvider ranks + explains → validate every plan_id against catalog → persist recommendation row · status=shown" },
+      { t: "orange",  k: "F2 · Chat thread", v: "POST advisor/threads/:id/messages → assemble bounded context (recent messages + retrieved candidates) → ModelProvider → stream or respond → persist assistant message · token + latency logged" },
+      { t: "warning", k: "F3 · Structured output validation", v: "Model returns { recommended_plan_ref · rationale · alternatives[] } → schema-parse → every plan_id verified against esim_plans/voip_plans + region gate → drop/repair invalid entries · never surface hallucinated plan" },
+      { t: "teal",    k: "F4 · Accept → B5 handoff (screen 46)", v: "User accepts → recommendation.status=accepted → create B5 quote for that plan → hand off to screen 25 purchase-review → linkage recorded for loyalty + analytics + acceptance-rate metric" },
+      { t: "purple",  k: "F5 · Dismiss", v: "User dismisses → recommendation.status=dismissed · reason optional · feeds future tuning + acceptance-rate metric" },
+      { t: "purple",  k: "F6 · Advisor history (screen 47)", v: "List past threads + past recommendations with outcomes (shown / accepted → order_id / dismissed) · cursor pagination" },
+      { t: "warning", k: "F7 · Region + entitlement gate", v: "Retrieval pre-filters by user.market_region via regional_flags · model never sees disabled-market plans · VPN/VoIP rules honored · G-07 VPN consent gate respected" },
+      { t: "warning", k: "F8 · PII redaction", v: "Pre-send redactor strips identifiers not needed for the recommendation · email · phone · payment refs · iccid · stored payload audit-only · model payload minimal" },
+    ],
+    methods: [
+      "createCompletion({ messages, tools?, maxTokens, temperature, requestId }) → { text | toolCalls, usage: { promptTokens, completionTokens, latencyMs, costMinor } }",
+      "createStreamingCompletion(...) → AsyncIterable<chunk> · SSE-compatible · same usage on completion",
+      "embed({ texts }) → vectors · used by retrieval grounding (optional v1 · keyword retrieval acceptable)",
+      "validateStructuredOutput(schema, raw) → { ok, value, errors[] } · zod schema enforces { recommended_plan_ref · rationale · alternatives[] }",
+      "redactPII(payload) → payload' · strips email · phone · payment_method_ref · iccid · did · session ids · user_id replaced with opaque hash",
+    ],
+    tables: [
+      { t: "orange",  k: "advisor_threads", v: "id · user_id · title · created_at · last_message_at · status (active | archived) · soft-delete on user request" },
+      { t: "orange",  k: "advisor_messages", v: "id · thread_id · role (user | assistant | system) · content · token_count · model_version · created_at · UNIQUE (thread_id, request_id)" },
+      { t: "warning", k: "recommendations", v: "id · user_id · thread_id? · recommended_plan_ref · candidate_set (jsonb) · rationale · status (shown | accepted | dismissed) · order_id? · created_at" },
+      { t: "purple",  k: "advisor_usage", v: "id · user_id · model_version · prompt_tokens · completion_tokens · latency_ms · cost_minor + currency · request_id · feeds B8 cost view" },
+      { t: "teal",    k: "advisor_config (versioned)", v: "version · system_prompt · retrieval_params · model + version · max_tokens · temperature · rate-limit settings · effective_from" },
+      { t: "warning", k: "advisor_rate_limits", v: "user_id · window_start · request_count · token_count · enforced before ModelProvider call · 429 ADVISOR_RATE_LIMIT" },
+    ],
+    endpoints: [
+      "POST   /advisor/threads                     · create new thread · returns thread_id + initial system context",
+      "GET    /advisor/threads                     · list user threads · cursor pagination · last_message_at desc",
+      "GET    /advisor/threads/:id/messages        · paginated messages · cursor pagination",
+      "POST   /advisor/threads/:id/messages        · post user message · streams or returns assistant reply · idempotent on request_id",
+      "POST   /advisor/recommend                   · explicit recommendation request · intent payload · returns validated recommendation",
+      "POST   /advisor/recommendations/:id/accept  · transitions to accepted · creates B5 quote · returns purchase-review handoff",
+      "POST   /advisor/recommendations/:id/dismiss · transitions to dismissed · optional reason",
+      "GET    /advisor/history                     · threads + recommendations with outcomes · screen 47",
+      "GET    /admin/advisor/usage                 · token + cost rollup · per-user + global · B8 admin cost view",
+      "GET    /admin/advisor/config                · read system_prompt + retrieval_params + model + version",
+      "PATCH  /admin/advisor/config                · update produces NEW version · old recommendations keep their version pin",
+      "GET    /admin/advisor/recommendations       · acceptance-rate metric · per-region · per-plan · per-model-version",
+    ],
+    tests: [
+      "Hallucinated plan id rejected · model returns plan_ref not in catalog → validation fails · invalid entry dropped · never surfaced to user",
+      "Region-disabled plan never recommended · regional_flags off for market → retrieval excludes · model can't see · output validation double-checks",
+      "Accept creates correct B5 quote · POST accept → quote line items match recommended plan · price + currency from catalog not model",
+      "Rate-limit enforced · over-window request → 429 ADVISOR_RATE_LIMIT · ModelProvider not called · no usage row written",
+      "Token cap enforced · oversized context → trimmed to cap before send · or 400 CONTEXT_TOO_LARGE · never sends unbounded payload",
+      "PII redaction · payload sent to ModelProvider contains zero email / phone / iccid / payment_method_ref · audit row preserves what was redacted",
+      "Structured output validation · malformed JSON · missing rationale · extra fields → schema fail → repair or drop · never surface partial",
+      "Catalog retrieval determinism · same intent → same candidate set ordering · grounded ranking testable independent of model",
+      "Acceptance-rate metric · 10 shown / 3 accepted / 5 dismissed / 2 open → metric reads correctly per model_version",
+      "VPN G-07 consent gate · advisor recommends VPN · user without consent → handoff routes through consent screen first · never bypasses",
+      "Streaming response · SSE chunks arrive in order · final usage row written on stream-end · client reconnect resumes from request_id idempotency",
+      "Soft-delete thread · GET history excludes archived · admin view still surfaces them",
+    ],
+    pending: [
+      "Model + vendor + version · Anthropic / OpenAI / regional · cost per 1M tokens · latency tolerance · refusal-rate · evaluation harness",
+      "System prompt + persona · tone · refusal posture · 'helpful travel-connectivity advisor' framing · multi-language (Arabic + English) handling",
+      "Acceptance-rate target · what counts as a good recommendation · KPI gates for shipping · A/B framework for prompt iteration",
+      "Data retention for advisor history · how long threads + messages persist · per-region privacy law · user-initiated delete vs scheduled purge",
+      "Per-tier access to Advisor · free vs paid · token quota per tier · loyalty-tier perks · or universal access in v1",
+      "Retrieval approach · keyword vs embeddings · embedding model choice if used · cost vs precision tradeoff",
+      "Cost budget · monthly cap per user · global cap · alerting threshold · who owns the bill",
+    ],
+    exit: [
+      "ModelProvider adapter live · sandbox stub deterministic · live skeleton ready · vendor swap is config",
+      "Catalog retrieval grounded · deterministic · testable independent of model · candidate set persisted",
+      "Structured-output validation enforced · zod schema · every plan_id verified · hallucinations dropped",
+      "Recommendation lifecycle green · shown → accepted (creates B5 quote) → dismissed · history surfaces all three",
+      "Region + entitlement gating · regional_flags respected · VPN G-07 consent honored · disabled markets invisible",
+      "Rate-limit + token-cap enforced · 429 + CONTEXT_TOO_LARGE typed errors · usage row written every successful call",
+      "PII redaction verified · model payload minimal · audit row preserves what was stripped",
+      "Streaming or clean req/resp · contract honored · client typing-indicator contract documented",
+      "Admin endpoints · usage rollup · config read/PATCH (versioned) · acceptance-rate metric · feeds B8",
+      "OpenAPI updated · advisor + recommendations + admin documented · structured-output schema referenced",
+      "Business decisions logged in Handoff · NOT code blockers · sandbox build proceeds with placeholder model",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -1388,6 +1481,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "b5") return buildBackendB5Page(page, spec);
   if (spec.kind === "fl") return buildBackendFLPage(page, spec);
   if (spec.kind === "b6") return buildBackendB6Page(page, spec);
+  if (spec.kind === "b7") return buildBackendB7Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -2257,6 +2351,104 @@ async function buildBackendB6Page(page, spec) {
 
   // Exit
   y = sectionHeader(page, "Exit", "Phase B6 exit checklist", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildBackendB7Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+  function endpointsBlock(items, cardH) {
+    for (let i = 0; i < items.length; i++) {
+      const line = items[i];
+      const m = line.match(/^(GET|POST|PATCH|PUT|DELETE)\s+(\S+)\s+·\s+(.*)$/);
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT.teal);
+      if (m) {
+        const tone = METHOD_TONE[m[1]] || ACCENT.teal;
+        safeText(card, m[1], 24, 18, 12, tone, PRIMARY_FONT_BOLD, 80);
+        safeText(card, m[2], 110, 18, 12, "#1C0804", PRIMARY_FONT_BOLD, 380);
+        safeText(card, m[3], 500, 18, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 524);
+      } else {
+        safeText(card, line, 24, 18, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  // 00 · Non-negotiables
+  y = sectionHeader(page, "00", "Non-negotiables · grounding · explainability · safety", 0, y);
+  rules2col(spec.rules, 110);
+
+  // 01 · Flows
+  y = sectionHeader(page, "01", "Flows · grounded recommendation · chat · accept / dismiss · privacy gates", 0, y);
+  kv2col(spec.flows, 130);
+
+  // 02 · ModelProvider methods
+  y = sectionHeader(page, "02", "ModelProvider · interface surface", 0, y);
+  fullRows(spec.methods, 56, "orange", false);
+
+  // 03 · Tables
+  y = sectionHeader(page, "03", "Tables · threads · messages · recommendations · usage · versioned config", 0, y);
+  kv2col(spec.tables, 110);
+
+  // 04 · Endpoints
+  y = sectionHeader(page, "04", "Endpoints · advisor + recommendations + admin", 0, y);
+  endpointsBlock(spec.endpoints, 56);
+
+  // 05 · Tests
+  y = sectionHeader(page, "05", "Test surface · grounding · validation · safety · routing", 0, y);
+  fullRows(spec.tests, 56, "purple", true);
+
+  // 06 · Pending
+  y = sectionHeader(page, "06", "Pending · product / policy decisions · NOT code blockers", 0, y);
+  fullRows(spec.pending, 64, "warning", false);
+
+  // Exit
+  y = sectionHeader(page, "Exit", "Phase B7 exit checklist", 0, y);
   fullRows(spec.exit, 56, "teal", true);
 }
 

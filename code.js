@@ -25,6 +25,7 @@ const PAGE_ORDER = [
   "■ M3 — Home & eSIM",
   "■ M4 — Connect (VoIP & VPN)",
   "■ M5 — AI, Billing & Loyalty",
+  "■ R1 — Testing, Observability & Handoff",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -2291,6 +2292,144 @@ const BACKEND_PAGES = [
       "Edge cases logged in Handoff · pending economics NOT a code blocker · M6 Account/System/Notifications inherits stable surfaces",
     ],
   },
+  {
+    name: "■ R1 — Testing, Observability & Handoff",
+    kind: "r1",
+    kicker: "R1 · PRODUCTION READINESS · 10 E2E JOURNEYS · OBSERVABILITY · DEPLOY/OPS · HANDOFF · OPEN DECISIONS · GO/NO-GO",
+    title: "Testing · Observability · Deploy/Ops · Handoff · Production Readiness",
+    subtitle: "Final phase. Runs after B0–B8 + FL + W1 + M1–M6. Closes the pack: end-to-end coverage of critical journeys against sandbox adapters · structured observability with redaction · containerized deploy + runbook · single source-of-truth handoff carrying every open finance/legal/platform decision · production-readiness checklist · launch-blocking vs post-soft-launch decisions surfaced for go/no-go.",
+    rules: [
+      { t: "warning", v: "Tests run against SANDBOX provider/payment/model adapters (deterministic) · NEVER live providers · seed + fixtures reproducible" },
+      { t: "warning", v: "Money · region-gating · provision-vs-install · idempotency · consent persistence are HIGHEST-RISK invariants · MUST be covered by tests · NEVER assumed" },
+      { t: "warning", v: "Observability NEVER logs secrets · full PII · tokens · card data · provider credentials · redact at the logging layer · verified by log scrubbing tests" },
+      { t: "warning", v: "Handoff documents truth INCLUDING unresolved decisions · NEVER paper over open finance/legal/platform items · each open decision has an owner" },
+      { t: "purple",  v: "No new product features · harden · test · observe · document · refactor only when required to make a critical invariant testable" },
+      { t: "purple",  v: "CI runs all layers on every change · backend unit/integration/e2e · web admin RBAC · Flutter widget + integration · cross-cutting reproducibility" },
+      { t: "teal",    v: "Health/readiness from B0 wired to deployment health checks · alerting on payment/provisioning spikes · reconciliation mismatches · dead-letter growth · auth-abuse signals" },
+      { t: "teal",    v: "Production-readiness checklist gates launch · tests green · observability live · secrets managed · backups verified · open decisions assigned to owners" },
+    ],
+    journeys: [
+      { t: "warning", k: "J1 · First-time onboarding",      v: "GDPR consent persisted (G-06) → register → verify (email/SMS) → 2FA setup (S-04) → biometric (S-05) → active session · all states + idempotent retries" },
+      { t: "warning", k: "J2 · Returning login + 2FA",      v: "Login → 2FA challenge → refresh-token rotation · reuse-detection forces full re-auth · idle-timeout (S-06) lock + re-auth path tested" },
+      { t: "warning", k: "J3 · First eSIM purchase",        v: "Browse → quote (tax + G-08 refund ack) → external PSP → 3DS (S-07) → webhook-confirmed paid → provisioning → install · provision ≠ install verified · success haptic" },
+      { t: "warning", k: "J4 · eSIM top-up",                v: "Idempotent · same Idempotency-Key on retry · NEVER double-charge · NEVER double-provision · webhook source-of-truth · receipt issued once" },
+      { t: "warning", k: "J5 · VPN first activation",       v: "G-07 acceptance persisted (versioned) → region-gated config issue (B4) → connect · region-disabled market refused cleanly (typed refusal) · NEVER start-then-fail" },
+      { t: "purple",  k: "J6 · AI recommendation → buy",    v: "B7 grounded recommendation → routes into M3 screen 25 with linkage · hallucinated/region-disabled plan NEVER surfaced · acceptance attribution end-to-end" },
+      { t: "purple",  k: "J7 · Subscription change/cancel", v: "Change with proration from B5 · cancel-at-period-end vs immediate per FL · G-14 trial expiry modal on first-open after expiry · routes convert/downgrade" },
+      { t: "warning", k: "J8 · Payment-failure paths",      v: "G-12 timeout safe retry (idempotent) · paid-but-provisioning-failed → auto-refund OR flagged-review · NEVER silent charged-but-undelivered" },
+      { t: "purple",  k: "J9 · Loyalty earn + redeem",      v: "Event-driven earn (idempotent ledger entry) · redeem applied SERVER-SIDE at quote · concurrent redeem NEVER overspends balance · B6 ledger consistent" },
+      { t: "warning", k: "J10 · Recovery + security",       v: "Password reset invalidates ALL sessions · session-revoke immediate · account deletion preserves finance/audit records (B5/B8) per retention policy" },
+    ],
+    backendTests: [
+      { t: "purple",  k: "Unit",         v: "Services · money utils (minor units · currency formatting · NEVER float) · rules engines (FL tax · region gating · refund eligibility) · token rotation · OTP rate limit" },
+      { t: "purple",  k: "Integration",  v: "DB + queue + webhook idempotency · provider signature verification · PaymentIntent state machine · provisioning state machine · ledger append-only invariant · consent versioning" },
+      { t: "warning", k: "E2E (sandbox)", v: "10 journeys against sandbox PSP/eSIM/VoIP/VPN/model adapters · deterministic seed · webhook replay · 3DS challenge sandbox · reconciliation mismatch synthetic" },
+      { t: "teal",    k: "Property",     v: "Idempotency-Key uniqueness · ledger balance = sum(entries) invariant · provisioning never charged-but-undelivered · region-gate honored across all entry points" },
+    ],
+    webAdminTests: [
+      { t: "warning", k: "RBAC enforcement",       v: "Least-privilege denials · UI-hidden control attempted via API → 403 · role/permission matrix · approval-threshold gating for high-risk actions" },
+      { t: "warning", k: "Audit on mutation",      v: "Every destructive/financial action writes audit entry · before/after state · actor · IP · timestamp · NEVER missing for refund/adjustment/disable" },
+      { t: "purple",  k: "Secret masking",         v: "Provider credentials write-only · last-4 / presence only on read · admin UI never receives full secrets · log scrubbing verified" },
+      { t: "purple",  k: "Reconciliation",         v: "A19 mismatch output reconciles to B5 ledger · synthetic mismatches (over/under) flagged · resolve-with-audit path tested" },
+    ],
+    flutterTests: [
+      { t: "purple",  k: "Widget tests",           v: "Key components render light + dark + RTL · numbers stay LTR in Arabic · reduced-motion alternatives · haptic hooks fire · token-driven (NEVER raw hex)" },
+      { t: "warning", k: "Integration · auth",     v: "J1 + J2 + J10 · onboarding + login + recovery · biometric + 2FA + idle-lock · refresh-token rotation + reuse-detection" },
+      { t: "warning", k: "Integration · purchase", v: "J3 + J4 + J7 · eSIM purchase + top-up + subscription change · M3 quote → PSP → 3DS → success · idempotent retry · G-12 + G-14" },
+      { t: "warning", k: "Integration · VPN",      v: "J5 · G-07 acceptance → config issue → connect · region-disabled refused cleanly · G-10 + G-11 banners surface · platform tunnel lifecycle stub-driven" },
+    ],
+    observability: [
+      { t: "warning", k: "Structured logging",     v: "request_id + correlation_id across API → queue → webhook · JSON · log level per env · REDACTION at logging layer (secrets · PII · tokens · card data · provider credentials)" },
+      { t: "purple",  k: "Metrics",                v: "Provisioning success/failure rates · payment success/3DS/timeout · refund/reconciliation mismatches · queue depth + dead-letter · model usage/cost · API latency + error rates" },
+      { t: "purple",  k: "Error tracking",         v: "Sentry-style for backend + web + mobile · source-mapped · release-tagged · user_id hashed (never raw PII) · breadcrumbs scrubbed" },
+      { t: "teal",    k: "Health + readiness",     v: "B0 endpoints wired to deployment probes · liveness vs readiness distinct · DB + queue + provider-adapter health surfaced · 503 cleanly during maintenance (A17 → G-03)" },
+      { t: "warning", k: "Alerting",               v: "Payment/provisioning failure spikes · reconciliation mismatches · dead-letter queue growth · auth-abuse signals (OTP burst · login burst) · routing to ops channel" },
+      { t: "purple",  k: "Tracing (optional)",     v: "OpenTelemetry traces across API → queue → adapter · spans for PSP/eSIM/VoIP/VPN/model calls · sampling per env · helps debug provision-vs-install delta" },
+    ],
+    deployOps: [
+      { t: "warning", k: "Containerized deploy",   v: "B0 Docker · env-based config (dev/staging/prod) · NO secrets in image · provider credentials via secure config store · image scan in CI" },
+      { t: "warning", k: "Migrations + seed",      v: "Prisma migrate deploy on release · seed only in non-prod · rollback steps documented · DB version-pinned · zero-downtime patterns for schema-additive" },
+      { t: "purple",  k: "Backup + restore",       v: "PostgreSQL nightly + WAL archiving · restore drill quarterly · retention aligned to (TBD) policy · backups encrypted at rest · access audited" },
+      { t: "purple",  k: "Secrets management",     v: "No secrets in code · images · client bundles · vault/SSM/secrets-manager · rotation cadence per credential type · access audit trail" },
+      { t: "teal",    k: "Data retention jobs",    v: "Aligned to to-be-confirmed retention policy · finance/audit preserved beyond user-deletion per legal · scheduled jobs idempotent · dry-run mode for ops" },
+    ],
+    runbook: [
+      "Replay a failed provisioning job · find by correlation_id · re-enqueue with same Idempotency-Key · verify webhook source-of-truth · audit entry on manual replay",
+      "Handle a reconciliation mismatch (A19) · drill-down · classify (provider lag · webhook miss · refund-not-recorded) · resolve-with-audit · escalate to finance if material",
+      "Rotate provider credentials (PSP · eSIM · VoIP · VPN · model · push · SMS) · update secure store · re-deploy adapter · verify sandbox first · audit + sign-off",
+      "Toggle maintenance mode (A17) · drives client G-03 · communicate window · readiness probe returns 503 · post-mortem if unplanned",
+      "Respond to a region-availability change · update regional_flags (FL) · client honors via typed refusal · NEVER start-then-fail · communicate to affected users",
+      "Auth-abuse response · OTP/login burst alert · rate-limit tighten · suspect-account suspend (A03) · revoke sessions · postmortem",
+      "Payment-failure spike response · check PSP status · check 3DS challenger · throttle if upstream · communicate · dunning paused if systemic",
+      "Account-deletion request · soft-delete user · preserve finance/audit · revoke sessions · email confirmation · audit entry · per retention policy",
+    ],
+    handoffOpenDecisions: [
+      { t: "warning", k: "Entity / domicile",            v: "Drives Stripe eligibility + every VAT obligation · RESOLVE FIRST · launch-blocking · owner: founders + legal · downstream of every commerce decision" },
+      { t: "warning", k: "Place-of-supply ruling",       v: "Written ruling for eSIM/VoIP/VPN per market · ESPECIALLY before enabling KSA at 15% · launch-blocking for KSA · owner: tax counsel" },
+      { t: "warning", k: "Live PSP selection",           v: "Confirmed fees + recurring + onboarding · e-invoicing approach (build ZATCA Phase 2 + UAE OR use Merchant of Record) · launch-blocking · owner: finance + eng" },
+      { t: "warning", k: "Apple App Store channel · VPN", v: "IAP vs external for VPN before iOS submission · eSIM/VoIP confirmed external · launch-blocking for iOS · owner: mobile lead + Apple liaison" },
+      { t: "warning", k: "Apple entitlements",           v: "eSIM CoreTelephony/CommCenter (likely unavailable → Universal-Link/manual install) · iOS Network Extension (VPN) · CallKit (VoIP) · START APPROVALS EARLY · owner: mobile lead" },
+      { t: "warning", k: "Gulf VPN/VoIP legality",       v: "Per market · region-flag default = restricted-off until cleared · verify current UAE/TDRA + KSA + Bahrain + Oman · launch-blocking per-market · owner: legal" },
+      { t: "purple",  k: "Refund policy wording",        v: "UAE/KSA consumer law alignment · G-08 inline copy · counsel-reviewed · per-language · owner: legal + product" },
+      { t: "purple",  k: "Loyalty economics",            v: "Earn rates · redeem ratios · expiry · per-market caps · NOT launch-blocking (post-soft-launch tunable) · owner: business + finance" },
+      { t: "purple",  k: "Admin RBAC matrix",            v: "Final role/permission matrix + approval thresholds for refund/adjustment/disable · owner: ops lead · NOT launch-blocking but pre-prod" },
+      { t: "purple",  k: "Data retention windows",       v: "Per data class (auth · finance · audit · PII · ledger) · aligned to UAE PDPL + KSA + tax law · owner: legal · drives retention jobs" },
+    ],
+    productionChecklist: [
+      "All 10 E2E journeys green in CI against sandbox adapters · deterministic · reproducible · seed pinned",
+      "Backend unit + integration + property tests green · money / region-gate / provision-vs-install / idempotency / consent invariants covered",
+      "Web admin RBAC + audit-on-mutation + secret-masking + reconciliation tests green",
+      "Flutter widget tests light + dark + RTL · integration tests for auth + purchase + VPN-connect green",
+      "Structured logging with redaction verified · log-scrubbing tests green · NEVER secrets/PII/tokens/cards/provider creds in logs",
+      "Metrics + error tracking + alerting wired · alert routing tested · synthetic alert fires correctly",
+      "Health + readiness probes wired to deployment · maintenance mode (A17) drives client G-03 cleanly",
+      "Containerized deploy from B0 Docker · env config · NO secrets in image · image scanned · staging deployed",
+      "Migrations + seed + rollback documented + drilled · zero-downtime additive patterns verified",
+      "PostgreSQL backup + WAL archiving live · restore drill completed · backups encrypted · retention configured",
+      "Secrets management · no secrets in code/images/bundles · rotation cadence documented · access audited",
+      "Runbook published · ops channel routes alerts · on-call rotation defined · postmortem template ready",
+      "Handoff document published · architecture · non-negotiables enforcement · open decisions assigned to owners",
+      "Open decisions classified launch-blocking vs post-soft-launch · go/no-go view shared with founders",
+      "Apple entitlement approvals in flight (Network Extension · CallKit · PushKit) · eSIM channel decision recorded",
+      "Region-flags default = restricted-off for unverified markets · clearance owner per market assigned",
+    ],
+    launchBlocking: [
+      "Entity/domicile resolved (drives Stripe + VAT obligations)",
+      "Place-of-supply ruling for KSA before enabling 15% VAT path",
+      "Live PSP selection + fees + recurring + onboarding confirmed · e-invoicing approach decided",
+      "Apple VPN channel call (IAP vs external) before iOS submission",
+      "Gulf VPN/VoIP legality per launch market verified · region-flag flipped on only after clearance",
+      "Apple entitlements approved OR Universal-Link/manual-install fallback documented for eSIM",
+      "Refund policy wording counsel-reviewed per market + language",
+      "All 10 E2E journeys green · observability live · secrets managed · backups drilled",
+    ],
+    postSoftLaunch: [
+      "Loyalty economics tuning · earn/redeem ratios · expiry · per-market caps (configurable in A12)",
+      "AI streaming vs request/response final contract decision · post-launch tunable",
+      "Call-quality threshold (G-13) tuning · jitter / loss / MOS · false-positive vs missed-degradation balance",
+      "Captive portal heuristic (G-10) cross-platform reliability tuning",
+      "VPN protocol fallback (WireGuard → OpenVPN) auto-detect tuning",
+      "Trusted-network UX · auto-connect on untrusted · battery cost vs protection-always",
+      "Admin RBAC matrix refinement · approval thresholds tuned to actual ops volume",
+      "Data retention windows finalization once legal confirms per data class",
+    ],
+    exit: [
+      "All 10 critical journeys green in CI against sandbox · NEVER live providers in tests",
+      "Highest-risk invariants covered by tests · money · region-gate · provision-vs-install · idempotency · consent persistence",
+      "Observability live · structured logging with redaction · metrics · error tracking · alerting · health probes",
+      "Containerized deploy · env config · secrets vaulted · backups + restore drilled · runbook published",
+      "Web admin RBAC + audit-on-mutation enforced server-side · UI gating convenience only · secret masking verified",
+      "Flutter widget + integration tests green · light/dark/RTL · reduced-motion · haptics",
+      "Handoff document is single source-of-truth · architecture · non-negotiables · open decisions with owners",
+      "Production-readiness checklist completed with current pass/fail status",
+      "Launch-blocking decisions surfaced to founders for go/no-go · post-soft-launch decisions parked with owners",
+      "Apple entitlement approvals in flight · eSIM channel (Universal-Link/manual-install) decision recorded",
+      "Region-flags default = restricted-off for unverified markets · per-market clearance owner assigned",
+      "Secret/PII redaction verified by log-scrubbing tests · NEVER tokens / cards / provider creds in logs",
+      "No new product features added in R1 · only harden + test + observe + document",
+      "Roamlu is production-ready pending the explicit launch-blocking decisions list",
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -2334,6 +2473,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "m3") return buildBackendM3Page(page, spec);
   if (spec.kind === "m4") return buildBackendM4Page(page, spec);
   if (spec.kind === "m5") return buildBackendM5Page(page, spec);
+  if (spec.kind === "r1") return buildBackendR1Page(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -3955,6 +4095,94 @@ async function buildBackendM5Page(page, spec) {
 
   y = sectionHeader(page, "Exit", "Phase M5 exit checklist · AI + Billing + Loyalty", 0, y);
   fullRows(spec.exit, 56, "purple", true);
+}
+
+async function buildBackendR1Page(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  const COL_GAP = 32;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const card = backendCard(page, cx, cy, colW, cardH, ACCENT[r.t] || ACCENT.orange);
+      safeText(card, r.v, 24, 22, 13, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function kv2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey, withCheckbox) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.warning);
+      if (withCheckbox) {
+        const box = createFrame(card, "checkbox", 24, 18, 18, 18, "#FFF8F4", "#E8E0DB");
+        box.cornerRadius = 4;
+        safeText(card, items[i], 60, 18, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 80);
+      } else {
+        safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      }
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  y = sectionHeader(page, "00", "Non-negotiables · sandbox-only tests · invariants tested · redacted logs · honest handoff", 0, y);
+  rules2col(spec.rules, 110);
+
+  y = sectionHeader(page, "01", "10 Critical Journeys · onboarding → purchase → VPN → AI → subscription → loyalty → recovery", 0, y);
+  kv2col(spec.journeys, 110);
+
+  y = sectionHeader(page, "02", "Backend test layers · unit · integration · e2e (sandbox) · property", 0, y);
+  kv2col(spec.backendTests, 110);
+
+  y = sectionHeader(page, "03", "Web admin tests · RBAC · audit · masking · reconciliation", 0, y);
+  kv2col(spec.webAdminTests, 110);
+
+  y = sectionHeader(page, "04", "Flutter tests · widget (light/dark/RTL) · auth · purchase · VPN", 0, y);
+  kv2col(spec.flutterTests, 110);
+
+  y = sectionHeader(page, "05", "Observability · logging + redaction · metrics · error tracking · health · alerting · tracing", 0, y);
+  kv2col(spec.observability, 110);
+
+  y = sectionHeader(page, "06", "Deploy + Ops · containers · migrations · backups · secrets · retention", 0, y);
+  kv2col(spec.deployOps, 110);
+
+  y = sectionHeader(page, "07", "Runbook · replay · reconcile · rotate · maintenance · region · auth-abuse · payment-spike · deletion", 0, y);
+  fullRows(spec.runbook, 64, "teal", false);
+
+  y = sectionHeader(page, "08", "Handoff · OPEN DECISIONS · each carries an owner · NEVER paper over", 0, y);
+  kv2col(spec.handoffOpenDecisions, 110);
+
+  y = sectionHeader(page, "09", "Production-readiness checklist · current pass/fail status", 0, y);
+  fullRows(spec.productionChecklist, 56, "purple", true);
+
+  y = sectionHeader(page, "10", "Launch-blocking decisions · go/no-go view for founders", 0, y);
+  fullRows(spec.launchBlocking, 64, "warning", false);
+
+  y = sectionHeader(page, "11", "Post-soft-launch decisions · resolvable after go-live · parked with owners", 0, y);
+  fullRows(spec.postSoftLaunch, 64, "purple", false);
+
+  y = sectionHeader(page, "Exit", "Phase R1 exit checklist · production readiness · handoff complete", 0, y);
+  fullRows(spec.exit, 56, "teal", true);
 }
 
 async function buildAccessibilityPage(page) {

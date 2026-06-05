@@ -5590,10 +5590,18 @@ async function assertSafeToRun() {
   const isKnownRun = figma.root.getPluginData("generator") === ROOT_MARKER;
   if (isKnownRun) return true;
   const pages = figma.root.children;
+  // Treat any file already containing one of our PAGE_ORDER names as ours.
+  const ours = new Set(PAGE_ORDER);
+  if (pages.some((p) => ours.has(p.name))) {
+    figma.root.setPluginData("generator", ROOT_MARKER);
+    return true;
+  }
   const nonEmpty = pages.filter((p) => p.children.length > 0);
   const safe = pages.length <= 1 &&
     (nonEmpty.length === 0 || (nonEmpty.length === 1 && pages[0].name === "Page 1"));
   if (!safe) { figma.closePlugin("Use this plugin on a new or disposable empty Figma Design file."); return false; }
+  // Mark immediately so re-runs always pass.
+  figma.root.setPluginData("generator", ROOT_MARKER);
   return true;
 }
 

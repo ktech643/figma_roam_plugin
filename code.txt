@@ -412,12 +412,30 @@ function drawPhoneChrome(frame, id, title, mode, dir) {
   createRect(frame, 0, 746, 390, 64, surface);
   createRect(frame, 0, 746, 390, 1, border);
   const labels = isRtl ? ["حسابي", "الاتصال", "الشريحة", "الرئيسية"] : ["Home", "eSIM", "Connect", "Account"];
+  const icons  = isRtl ? ["👤", "🛡", "📱", "⌂"] : ["⌂", "📱", "🛡", "👤"];
+  const active = activeTabFor(id);
+  const accent = "#E05820";
   for (let i = 0; i < 4; i++) {
     const x = 24 + i * 86;
-    createRect(frame, x + 30, 762, 24, 24, sub, 6);
-    createText(frame, labels[i], x + 14, 790, 10, sub);
+    const isActive = i === active;
+    const fg = isActive ? accent : sub;
+    if (isActive) {
+      const pill = createFrame(frame, `tab-${i}-active`, x, 754, 86, 44, isDark ? "#2A1E18" : "#FFE4D6");
+      pill.cornerRadius = 12;
+    }
+    createText(frame, icons[i], x + 32, 758, 18, fg, PRIMARY_FONT, 24);
+    createText(frame, labels[i], x + 8, 790, 10, fg, isActive ? PRIMARY_FONT_BOLD : PRIMARY_FONT, 70);
   }
   createRect(frame, 121, 822, 148, 5, sub, 3);
+}
+
+function activeTabFor(id) {
+  // Map screen id to active bottom-tab index: 0 Home · 1 eSIM · 2 Connect · 3 Account
+  if (id === "16" || id === "17" || id === "18" || id === "19" || id === "20") return 0;
+  if ((id >= "21" && id <= "30") || (id && id.indexOf("E-") === 0)) return 1;
+  if ((id >= "31" && id <= "43") || (id && id.indexOf("V-") === 0)) return 2;
+  if ((id >= "44" && id <= "66") || (id && id.indexOf("B-") === 0)) return 3;
+  return 0;
 }
 
 function drawAndroidChrome(frame, id, title) {
@@ -428,6 +446,20 @@ function drawAndroidChrome(frame, id, title) {
   createText(frame, id, 16, 76, 11, "#7A6058");
   drawScreenBody(frame, id, title, "light", "ltr", "android");
   createRect(frame, 0, 736, 360, 64, "#FFE8DC");
+  const aLabels = ["Home", "eSIM", "Connect", "Account"];
+  const aIcons = ["⌂", "📱", "🛡", "👤"];
+  const aActive = activeTabFor(id);
+  for (let i = 0; i < 4; i++) {
+    const x = 8 + i * 86;
+    const isActive = i === aActive;
+    const fg = isActive ? "#E05820" : "#7A6058";
+    if (isActive) {
+      const pill = createFrame(frame, `tab-${i}-active`, x, 744, 86, 44, "#FFE4D6");
+      pill.cornerRadius = 12;
+    }
+    createText(frame, aIcons[i], x + 32, 750, 18, fg, PRIMARY_FONT, 24);
+    createText(frame, aLabels[i], x + 8, 782, 10, fg, isActive ? PRIMARY_FONT_BOLD : PRIMARY_FONT, 70);
+  }
 }
 
 const ADMIN_NAV_GROUPS = [

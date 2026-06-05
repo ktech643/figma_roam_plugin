@@ -5,5 +5,12 @@
   "main": "code.js",
   "editorType": ["figma"],
   "documentAccess": "dynamic-page",
-  "networkAccess": { "allowedDomains": ["none"] }
+  "networkAccess": { "allowedDomains": ["none"] },
+  "menu": [
+    { "name": "Build all", "command": "all" },
+    { "separator": true },
+    { "name": "Mobile (Design System + Components + 11 mobile pages)", "command": "mobile" },
+    { "name": "Admin Web (20 screens × 80 frames)", "command": "admin" },
+    { "name": "Backend specs (B0–R1 + Prototype + Handoff)", "command": "backend" }
+  ]
 }

@@ -5611,17 +5611,28 @@ async function main() {
   }
 
   const byName = Object.fromEntries(figma.root.children.map((p) => [p.name, p]));
-  await buildDesignSystemPage(byName["■ Design System"]);
-  await buildComponentsPage(byName["■ Components"]);
-  for (const s of MOBILE_SECTIONS) await buildMobilePage(byName[s.page], s.screens);
-  await buildAdminPage(byName["■ 12 — Admin Web"]);
-  for (const b of BACKEND_PAGES) if (byName[b.name]) await buildBackendPage(byName[b.name], b);
-  await buildPrototypePage(byName["■ Prototype"]);
-  await buildHandoffNotesPage(byName["■ Handoff Notes"]);
+  const cmd = figma.command || "all";
+  const runMobile = cmd === "all" || cmd === "mobile";
+  const runAdmin = cmd === "all" || cmd === "admin";
+  const runBackend = cmd === "all" || cmd === "backend";
+
+  if (runMobile) {
+    await buildDesignSystemPage(byName["■ Design System"]);
+    await buildComponentsPage(byName["■ Components"]);
+    for (const s of MOBILE_SECTIONS) await buildMobilePage(byName[s.page], s.screens);
+  }
+  if (runAdmin) {
+    await buildAdminPage(byName["■ 12 — Admin Web"]);
+  }
+  if (runBackend) {
+    for (const b of BACKEND_PAGES) if (byName[b.name]) await buildBackendPage(byName[b.name], b);
+    await buildPrototypePage(byName["■ Prototype"]);
+    await buildHandoffNotesPage(byName["■ Handoff Notes"]);
+  }
 
   figma.root.setPluginData("generator", ROOT_MARKER);
   const warn = WARNINGS.length ? ` Warnings: ${[...new Set(WARNINGS)].join(" | ")}` : "";
-  figma.notify(`Roamlu v2 structure created.${warn}`, { timeout: 8000 });
+  figma.notify(`Roamlu v2 — ${cmd} build complete.${warn}`, { timeout: 8000 });
   figma.closePlugin();
 }
 

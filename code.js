@@ -27,6 +27,7 @@ const PAGE_ORDER = [
   "■ M5 — AI, Billing & Loyalty",
   "■ M6 — Account, Notifications & System",
   "■ R1 — Testing, Observability & Handoff",
+  "■ Review Checklists",
   "■ Prototype", "■ Handoff Notes"
 ];
 
@@ -2552,6 +2553,289 @@ const BACKEND_PAGES = [
       "Roamlu is production-ready pending the explicit launch-blocking decisions list",
     ],
   },
+  {
+    name: "■ Review Checklists",
+    kind: "checklist",
+    kicker: "REVIEW · ONE CHECKLIST PER PHASE · ALL TICKED · DRIFT FLAGS · NON-NEGOTIABLES VERIFIED · MIRRORS OPERATOR PLAYBOOK",
+    title: "Roamlu Build Pack — Review Checklists",
+    subtitle: "One checklist per phase. After running a phase, scan to its section and verify before starting the next. A phase is not 'done' until its checklist passes. These mirror the non-negotiables in the operator playbook. All boxes ticked = full pack (B0–R1) implemented.",
+    global: [
+      "No secrets in code, images, or client bundles",
+      "Money is integer minor units + ISO currency code (never float)",
+      "Timestamps stored UTC (timestamptz)",
+      "Output matches the phase's stated 'Output behavior' (summary → build → gaps list)",
+    ],
+    phases: [
+      {
+        code: "B0", title: "Setup & Scaffold",
+        items: [
+          "Stack is exactly NestJS + PostgreSQL + Prisma + Redis/BullMQ (not substituted)",
+          "Module folders exist for every later phase; nothing implemented yet",
+          "Typed config fails fast on a missing env var",
+          "Money utility (minor units + currency) present; float-money convention forbidden",
+          "Global error envelope { error: { code, message, details } } wired",
+          "Request-ID + structured logging interceptor; /health + /ready; /docs (empty OpenAPI)",
+          "All six provider adapter interfaces defined with sandbox stubs (esim, voip, vpn, payments, push, sms)",
+          ".env.example lists every var, no real values",
+        ],
+        drift: "business logic added too early · provider SDK imported into a module",
+      },
+      {
+        code: "B1", title: "Data Model (keystone)",
+        items: [
+          "All money fields BigInt minor units + currency column; no float/decimal-as-money",
+          "UUID PKs; created_at / updated_at everywhere; soft-delete where retention matters",
+          "FKs + indexes on FKs and common query columns; unique on email/phone/iccid/DID",
+          "Enums for all lifecycle/status fields (no free strings)",
+          "eSIM has SEPARATE provision_status and install_status",
+          "Loyalty is a points_ledger (signed entries) — NO single mutable balance column",
+          "consents (type + version + accepted_at), regional_flags, provider_configs, append-only audit_log present",
+          "admin_users separate from users; roles/permissions tables exist",
+          "Migration + seed run clean; seed defaults VPN/VoIP off in restricted markets",
+        ],
+        drift: "balance column on loyalty · provision==install · single hardcoded tax rate",
+      },
+      {
+        code: "B2", title: "API Contract",
+        items: [
+          "OpenAPI 3.1 generated from controllers/DTOs (not hand-written)",
+          "Consistent response + error envelope; cursor pagination on lists",
+          "Versioned /api/v1; admin under separate /api/v1/admin",
+          "Every money value in responses is { amount, currency }",
+          "Idempotency-Key required on payment + provisioning POSTs",
+          "Region-gated endpoints return a typed 403 (not generic error)",
+          "A Dart client and a TS client can be generated from the spec",
+          "Webhooks defined separately, signature-verified, not in the public client spec",
+        ],
+        drift: "hand-written client models · money as plain number",
+      },
+      {
+        code: "B3", title: "Auth & Security",
+        items: [
+          "Argon2id hashing; no password material logged/returned",
+          "Short access token; refresh rotation WITH reuse detection (family invalidation)",
+          "Refresh tokens hashed at rest, device-bound; access token carries no PII",
+          "Generic non-enumerating auth errors; rate-limit + lockout on auth/OTP/reset",
+          "OTPs single-use, expiring, hashed, attempt-limited",
+          "2FA setup confirms before enable; one-time recovery codes (hashed)",
+          "Biometric = device keypair signing a server challenge (not standalone identity)",
+          "Password reset invalidates all sessions; session list + revoke works",
+          "Step-up enforcement for sensitive actions (S-06)",
+          "Consent persisted with version + timestamp",
+          "Tests: reuse-detection, OTP limits, 2FA + recovery, revoke, reset-invalidation, step-up",
+        ],
+        drift: "consent UI-only · admin sharing the user auth realm",
+      },
+      {
+        code: "B4", title: "Provider Adapters",
+        items: [
+          "All provider access via interfaces; no SDK in business logic",
+          "Sandbox + live impls per provider, env-selected; tests use sandbox",
+          "Provisioning is async via queue; API never blocks on provider",
+          "Webhooks signature-verified AND idempotent (safe on duplicate)",
+          "Provider cost stored separately from user price",
+          "Region gating enforced BEFORE enqueuing a provisioning job",
+          "eSIM: provision success populates LPA/QR/Universal-Link + ICCID; install reported separately",
+          "VoIP number lifecycle reserved → active → released; reservation TTL auto-release; CDRs separate",
+          "VPN config issuance checks G-07 acceptance + regional flag first",
+          "Failed jobs: bounded retry → dead-letter surfaced to admin",
+          "Tests: provision success, failure+retry+DLQ, duplicate-webhook idempotency, region refusal, provision-vs-install",
+        ],
+        drift: "assuming in-app iOS provisioning · provisioning conflated with install",
+      },
+      {
+        code: "B5", title: "Billing & 3DS",
+        items: [
+          "Totals computed server-side; client-sent prices never trusted",
+          "Payments via PaymentProvider adapter (PSP swappable); no SDK in logic",
+          "3DS/SCA requires-action path supported; raw card data never on backend (token ref only)",
+          "Idempotency-Key on every charge + refund (no double-charge on retry)",
+          "Webhook is source of truth for final payment state; signatures verified; out-of-order/duplicate safe",
+          "G-08 refund acknowledgement persisted + versioned at quote",
+          "Payment timeout (G-12) → recoverable state, safe retry",
+          "Paid-but-provisioning-failed → auto-refund or flagged review (no silent charged-but-undelivered)",
+          "Subscriptions: trial, renewal via webhook, dunning, change/cancel; G-14 trial-expiry event",
+          "Reconciliation job flags internal-vs-provider mismatches (feeds A19)",
+          "Tests: idempotent charge, 3DS path, webhook-confirmed paid, timeout retry, paid-but-failed refund, renewal+dunning, refund reconcile",
+        ],
+        drift: "client confirmation marking payment succeeded · float money",
+      },
+      {
+        code: "FL", title: "Finance & Legal Decisions",
+        items: [
+          "PSP adapter kept generic; live provider chosen by config (not hardcoded)",
+          "Per-market VAT rate is data-driven (KSA 15 / UAE 5 / Bahrain 10 / Oman 5; data, not literals)",
+          "Payment channel decided per product: eSIM/VoIP = external PSP; VPN channel decided + recorded",
+          "Refund policy text + version in config; proration mode (native vs manual) decided",
+          "E-invoicing approach chosen (build ZATCA Phase 2 + UAE, or Merchant of Record)",
+          "All six open items assigned to an owner (entity/domicile resolved first)",
+        ],
+        drift: "treating any number here as final without advisor confirmation",
+      },
+      {
+        code: "B6", title: "Loyalty & Referrals",
+        items: [
+          "Balance = sum of append-only ledger; no mutable balance column",
+          "Earning is event-driven (paid/renewed/referral) and idempotent on source event",
+          "Point value + earn rates in config (not hardcoded); rules versioned",
+          "Redemption: balance check in a transaction — no overspend on concurrent redeem",
+          "Redeemed reward reduces a B5 quote server-side (never client-applied discount)",
+          "Referral: server-side single-use attribution; self/duplicate blocked; fraud-suspect flagged (not auto-paid)",
+          "Expiry (if enabled) is a traceable negative ledger entry via job",
+          "Tests: balance=ledger, idempotent earn, concurrent no-overspend, referral self/dup, flagged-not-paid, expiry",
+        ],
+        drift: "client asserting points · loyalty treated as non-financial",
+      },
+      {
+        code: "B7", title: "AI Advisor",
+        items: [
+          "Model never invents plans/prices; candidates come from live catalog (retrieval grounds)",
+          "Every model-referenced plan id validated against catalog before surfacing (hallucination dropped)",
+          "Model via ModelProvider adapter; key server-side only; swappable by config",
+          "Region gating + entitlement respected (won't recommend disabled-market plans)",
+          "Recommendation stores candidate set + rationale (explainable); accept routes to B5 quote (never charges)",
+          "Rate-limit + token cap per user; usage/cost logged; PII redacted from model payload",
+          "Tests: invalid-plan rejected, region-disabled never recommended, accept→correct quote, rate/token cap, redaction",
+        ],
+        drift: "AI as a bottom-nav tab · model output trusted without catalog validation",
+      },
+      {
+        code: "B8", title: "Admin Backend",
+        items: [
+          "Admin auth is a separate realm (admin_users, distinct token audience); no cross-login",
+          "Every endpoint declares a required permission (least privilege; nothing open to 'any admin')",
+          "Append-only audit on every mutation (actor/action/entity/before-after/request-id); not editable/deletable",
+          "PII access is itself audited + permissioned; secrets masked (last-4/presence)",
+          "Pricing changes versioned + audited; respect per-market tax/regional flags",
+          "A19 reconciliation = resolve-with-audit (finance-grade, not marketing dashboard)",
+          "Analytics computed from source ledgers (reconciles); cache ok, divergent number never stored as truth",
+          "Maintenance toggle (A17) drives client G-03",
+          "Tests: least-privilege denials, audit-on-mutation, audit immutability, PII logging, secret masking, pricing versioning, analytics reconciles",
+        ],
+        drift: "shared auth realm · unaudited mutations · full secrets returned",
+      },
+      {
+        code: "W1", title: "Web Admin (React)",
+        items: [
+          "API client generated from B8 OpenAPI (no hand-written models)",
+          "RBAC-aware UI hides/disables forbidden actions; server still enforces (no control that would 403)",
+          "Tokens from BrandGuide v2 values (not re-picked); layout 240/64/24, white cards 12 radius",
+          "Money displayed from API minor units + currency (not recomputed); masked fields as API returns",
+          "Tables: server-side paginate/filter/sort; loading/empty/error on every list",
+          "Destructive/financial actions: confirmation + audit-trail surfaced",
+          "Separate admin auth realm: login + 2FA + idle lock; tokens stored securely",
+          "Error envelope mapped; 401→re-auth, 403→friendly",
+          "Desktop 1440 + tablet 768 adaptations; accessible tables/forms/modals",
+        ],
+        drift: "generic-SaaS-blue look · client recomputing money · showing 403-bound controls",
+      },
+      {
+        code: "M1", title: "Flutter Foundation",
+        items: [
+          "Dart client generated from OpenAPI (no hand-written models)",
+          "Theme tokens = BrandGuide v2 values; widgets reference tokens, never raw hex",
+          "Light + dark both first-class; RTL + Cairo first-class; numbers/prices LTR in Arabic",
+          "Bottom nav exactly Home/eSIM/Connect/Account; AI NOT a tab; nav reverses in RTL",
+          "Tokens secure storage (Keychain/Keystore); interceptors: attach token, error envelope, 401 auto-refresh+rotation, force re-auth",
+          "Idempotency-Key generated for payment/provisioning POSTs",
+          "Session state machine; biometric hook; S-06 idle lock at shell",
+          "Foundation widgets exist (buttons/inputs/OTP/cards/sheet/progress ring/shimmer/banner/biometric/empty) — token-driven, light/dark/RTL, reduced-motion + haptic hooks",
+          "System states wired at shell: G-02 no-internet, G-03 maintenance, G-10/G-11 banners",
+        ],
+        drift: "AI tab · re-picked colors · feature screens built here",
+      },
+      {
+        code: "M2", title: "Onboarding & Auth",
+        items: [
+          "M1 tokens/widgets reused (no rebuilt primitives); light/dark/RTL on every screen",
+          "First-launch logic: G-06 → 01→08; registration 08→10→11→S-01→S-03→Home",
+          "GDPR (G-06) persisted via API (version+timestamp) before onboarding proceeds",
+          "Generic non-enumerating auth errors; UI reflects M1 session state (never decides locally)",
+          "OTP/2FA/biometric feel production-ready; resend cooldown; lockout handled gracefully",
+          "Default Arabic for Gulf locale; Gulf-first phone/region pickers",
+          "SSO captures consent on first login; deep-link routes through auth then resumes",
+          "Wrong-OTP error haptic; reduced-motion on onboarding hero",
+        ],
+        drift: "consent as throwaway checkbox · placeholder 2FA/biometric",
+      },
+      {
+        code: "M3", title: "Home & eSIM",
+        items: [
+          "M1 tokens/widgets; light/dark/RTL; screen-17 high-contrast variant",
+          "Plans/prices/availability from API (B4); region-disabled plans not shown/purchasable",
+          "Buy flow = external PSP (B5 PaymentIntent + 3DS); server-computed quote; Idempotency-Key",
+          "G-08 refund notice INLINE on screen 25 + acknowledgement persisted",
+          "After paid → track provisioning; provision ≠ install; install guide reports back",
+          "Install guide clear iOS vs Android; Universal-Link where available; no fake in-app iOS provisioning",
+          "G-12 timeout recoverable + safe retry; paid-but-failed reflects B5 refund/flag (no silent loss)",
+          "Top-up is a full flow (E-02/E-03), idempotent",
+          "AI-recommendation entry can pre-select a plan into screen 25",
+        ],
+        drift: "IAP for eSIM · claiming install on purchase success",
+      },
+      {
+        code: "M4", title: "Connect (VoIP & VPN)",
+        items: [
+          "M1 tokens/widgets; light/dark/RTL; teal = VPN/security",
+          "Connect feels like one area across both services",
+          "Region gating strict: disabled market refused cleanly (no start-then-fail)",
+          "VPN first activation: G-07 accepted + persisted BEFORE config issued",
+          "Number purchase reuses M3 PSP flow (idempotent); KYC requirement surfaced from API",
+          "VPN/VoIP credentials never logged/insecurely stored",
+          "G-13 call-quality = inline banner on active call; V-02 incoming = overlay",
+          "G-10 captive portal + G-11 reconnecting = banners over live screens, mirror in RTL",
+          "Connecting-ring reduced-motion alt; VPN-connected heavy haptic",
+          "Platform layers: iOS Network Extension / Android VpnService; CallKit/ConnectionService — flagged for handoff",
+        ],
+        drift: "VPN connect without G-07 · banners built as full pages",
+      },
+      {
+        code: "M5", title: "AI, Billing & Loyalty",
+        items: [
+          "M1 tokens/widgets; light/dark/RTL; purple = AI, orange = CTA",
+          "AI is an entry point, not a tab; renders only validated B7 recommendations",
+          "Accept recommendation → routes into M3 screen 25 (never charges); linkage preserved",
+          "Subscriptions/prices/tax from B5 per FL; external PSP reused; G-12 handled",
+          "G-14 trial-expiry = first-open modal (B5 event), not a settings screen",
+          "Loyalty balance = API/B6 ledger value (not client-computed); redeem applies at quote server-side",
+          "No casino-like/manipulative loyalty patterns; referral via share sheet",
+          "AI typing indicator + confetti have reduced-motion alts",
+        ],
+        drift: "client-applied discount · AI surfacing unvalidated plans",
+      },
+      {
+        code: "M6", title: "Account & System",
+        items: [
+          "M1 tokens/widgets; light/dark/RTL; live locale switch re-applies RTL without restart",
+          "Server is source of truth for sessions/security/flags",
+          "Security settings: active sessions list + revoke-by-id + revoke-all (immediate effect)",
+          "Account deletion follows B3 (anonymize/retain finance+audit), confirmed + step-up, irreversible",
+          "S-06 lock is a real re-auth interruption (not dismissible); S-07 = PSP challenge surface",
+          "G-03 maintenance blocks (from A17); G-05 what's-new shows once per version",
+          "G-04 deep-link landing respects auth state; G-15 returning-user is DISTINCT from first-run onboarding",
+          "Error/system screens offer a recoverable next step",
+        ],
+        drift: "re-running onboarding for returning users · one-tap account deletion",
+      },
+      {
+        code: "R1", title: "Testing, Observability & Handoff",
+        items: [
+          "Tests run against sandbox adapters (never live providers)",
+          "All 10 critical journeys covered e2e; high-risk invariants tested (money, region, provision≠install, idempotency, consent)",
+          "Web admin tested: RBAC denials, audit-on-mutation, secret masking, analytics reconciles",
+          "Flutter tested: key widgets (light/dark/RTL), auth/purchase/VPN integration",
+          "CI runs all layers on every change; reproducible seed/fixtures",
+          "Logging redacts secrets/PII/tokens/cards/credentials; correlation IDs across API→queue→webhook",
+          "Metrics + alerting: provisioning/payment/timeout rates, reconciliation mismatches, dead-letter, model cost, latency/errors",
+          "Deploy: containerized, env config, documented migrate/seed/rollback, backups, secrets store",
+          "Runbook covers replay-provisioning, reconciliation mismatch, credential rotation, maintenance toggle, region change",
+          "Handoff doc lists all open decisions with owners, split into launch-blocking vs post-soft-launch",
+          "Production-readiness checklist produced with pass/fail status",
+        ],
+        drift: "tests against live providers · open decisions left unassigned",
+      },
+    ],
+  },
 ];
 
 // ---- Helpers (defensive) -------------------------------------------
@@ -2597,6 +2881,7 @@ async function buildBackendPage(page, spec) {
   if (spec.kind === "m5") return buildBackendM5Page(page, spec);
   if (spec.kind === "m6") return buildBackendM6Page(page, spec);
   if (spec.kind === "r1") return buildBackendR1Page(page, spec);
+  if (spec.kind === "checklist") return buildChecklistPage(page, spec);
   return buildBackendB0Page(page, spec);
 }
 
@@ -4385,6 +4670,54 @@ async function buildBackendR1Page(page, spec) {
 
   y = sectionHeader(page, "Exit", "Phase R1 exit checklist · production readiness · handoff complete", 0, y);
   fullRows(spec.exit, 56, "teal", true);
+}
+
+async function buildChecklistPage(page, spec) {
+  clearGeneratedChildren(page);
+
+  const PAGE_W = 1472;
+  let y = backendHeader(page, spec, PAGE_W);
+
+  function tickedRow(parent, x, yy, w, h, text, accentHex) {
+    const card = createFrame(parent, "row", x, yy, w, h, "#FFFFFF", "#E8E0DB");
+    card.cornerRadius = 10;
+    createRect(card, 0, 0, 4, h, accentHex || ACCENT.teal);
+    const box = createFrame(card, "tick-box", 24, (h - 20) / 2, 20, 20, ACCENT.teal, ACCENT.teal);
+    box.cornerRadius = 4;
+    safeText(box, "✓", 4, 0, 14, "#FFFFFF", PRIMARY_FONT_BOLD, 16);
+    safeText(card, text, 60, (h - 16) / 2 - 1, 12, "#1C0804", PRIMARY_FONT, w - 80);
+    return card;
+  }
+
+  function driftRow(parent, x, yy, w, h, text) {
+    const card = createFrame(parent, "drift", x, yy, w, h, "#FFF6EE", "#E8C9A8");
+    card.cornerRadius = 10;
+    createRect(card, 0, 0, 4, h, ACCENT.warning);
+    safeText(card, "DRIFT FLAGS", 24, 12, 10, ACCENT.warning, PRIMARY_FONT_BOLD, w - 48);
+    safeText(card, text, 24, 30, 12, "#1C0804", PRIMARY_FONT, w - 48);
+    return card;
+  }
+
+  // Global non-negotiables band
+  y = sectionHeader(page, "GLOBAL", "Apply to every phase · all ticked = full pack verified", 0, y);
+  for (let i = 0; i < spec.global.length; i++) {
+    tickedRow(page, 0, y, PAGE_W, 44, spec.global[i], ACCENT.purple);
+    y += 52;
+  }
+  y += 24;
+
+  // Per-phase sections
+  for (let p = 0; p < spec.phases.length; p++) {
+    const ph = spec.phases[p];
+    y = sectionHeader(page, ph.code, ph.title + " · all checks passed", 0, y);
+    for (let i = 0; i < ph.items.length; i++) {
+      tickedRow(page, 0, y, PAGE_W, 44, ph.items[i], ACCENT.teal);
+      y += 52;
+    }
+    y += 8;
+    driftRow(page, 0, y, PAGE_W, 56, ph.drift);
+    y += 56 + 32;
+  }
 }
 
 async function buildAccessibilityPage(page) {

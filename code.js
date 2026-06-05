@@ -430,21 +430,128 @@ function drawAndroidChrome(frame, id, title) {
   createRect(frame, 0, 736, 360, 64, "#FFE8DC");
 }
 
-function drawAdminChrome(frame, id, title, isTablet) {
+const ADMIN_NAV_GROUPS = [
+  { name: "Operations", items: [
+    ["A01","Dashboard","▣"],["A02","Users","👥"],["A04","eSIM Orders","▤"],
+    ["A05","VoIP Numbers","📞"],["A06","VPN Sessions","🛡"],["A15","Support","💬"]
+  ]},
+  { name: "Commerce", items: [
+    ["A07","Revenue","📈"],["A08","Plans","✦"],["A09","Pricing","$"],
+    ["A12","Loyalty","★"],["A13","Referrals","↗"],["A14","Campaigns","✉"],["A19","Reconciliation","Σ"]
+  ]},
+  { name: "Configuration", items: [
+    ["A10","Providers","⚙"],["A11","VPN Servers","▥"],["A16","Notifications","🔔"],
+    ["A17","App Settings","🛠"],["A18","Admin Users","🔐"]
+  ]}
+];
+
+function envForScreen(id) {
+  if (id === "A09") return { label: "stage", color: "#D97706" };
+  if (id === "A10" || id === "A19") return { label: "prod", color: "#B42318" };
+  return { label: "dev", color: "#10A890" };
+}
+
+function drawAdminChrome(frame, id, title, isTablet, sidebarOpen) {
   const w = isTablet ? 768 : 1440;
-  const sidebarW = isTablet ? 64 : 240;
+  const sidebarW = sidebarOpen ? 240 : 64;
   frame.fills = solidPaint("#F5F0ED");
+  // sidebar
   createRect(frame, 0, 0, sidebarW, frame.height, "#FFFFFF");
   createRect(frame, sidebarW, 0, 1, frame.height, "#E8E0DB");
-  if (!isTablet) {
-    createText(frame, "Roamlu Admin", 24, 24, 16, "#1C0804", PRIMARY_FONT_BOLD);
-    const items = ["Dashboard", "Users", "eSIM Orders", "VoIP", "VPN", "Revenue", "Plans", "Settings"];
-    for (let i = 0; i < items.length; i++) createText(frame, items[i], 24, 80 + i * 36, 13, "#7A6058");
+
+  // logo block
+  createRect(frame, 16, 20, 32, 32, "#E05820", 8);
+  createRect(frame, 24, 28, 16, 16, "#8040D0", 4);
+  if (sidebarOpen) {
+    createText(frame, "Roamlu", 56, 22, 14, "#1C0804", PRIMARY_FONT_BOLD);
+    createText(frame, "admin · v1", 56, 38, 10, "#7A6058");
   }
+
+  // nav groups
+  let ny = 80;
+  for (const g of ADMIN_NAV_GROUPS) {
+    if (sidebarOpen) {
+      createText(frame, g.name.toUpperCase(), 20, ny, 9, "#A89A92", PRIMARY_FONT_BOLD, sidebarW - 40);
+      ny += 18;
+    } else {
+      createRect(frame, 16, ny + 6, 32, 1, "#E8E0DB"); ny += 16;
+    }
+    for (const it of g.items) {
+      const active = it[0] === id;
+      if (active) createRect(frame, 8, ny - 4, sidebarW - 16, 32, "#FFE4D6", 8);
+      createText(frame, it[2], sidebarOpen ? 20 : 26, ny + 4, 14, active ? "#E05820" : "#7A6058", PRIMARY_FONT_BOLD);
+      if (sidebarOpen) {
+        createText(frame, it[1], 44, ny + 6, 12, active ? "#1C0804" : "#7A6058", active ? PRIMARY_FONT_BOLD : PRIMARY_FONT, sidebarW - 60);
+      }
+      ny += 32;
+    }
+    ny += 8;
+  }
+
+  // status footer
+  if (sidebarOpen) {
+    const fy = frame.height - 56;
+    createRect(frame, 16, fy, sidebarW - 32, 40, "#F5F0ED", 8);
+    createRect(frame, 28, fy + 16, 8, 8, "#10A890", 4);
+    createText(frame, "All systems normal", 44, fy + 12, 11, "#1C0804", PRIMARY_FONT_BOLD);
+    createText(frame, "v2.4.1 · build 1810", 44, fy + 26, 9, "#7A6058");
+  } else {
+    createRect(frame, 24, frame.height - 32, 16, 16, "#10A890", 8);
+  }
+
+  // top header
   createRect(frame, sidebarW, 0, w - sidebarW, 64, "#FFFFFF");
   createRect(frame, sidebarW, 64, w - sidebarW, 1, "#E8E0DB");
   createText(frame, title, sidebarW + 24, 22, 18, "#1C0804", PRIMARY_FONT_BOLD);
-  createText(frame, id, w - 80, 24, 11, "#7A6058");
+
+  // env badge — right next to title
+  const env = envForScreen(id);
+  const titleApprox = title.length * 10 + 32;
+  const badgeX = sidebarW + 24 + titleApprox;
+  const badge = createFrame(frame, "env-badge", badgeX, 24, 60, 20, "#FFF8F4", env.color);
+  badge.cornerRadius = 10;
+  createText(badge, env.label.toUpperCase(), 10, 4, 10, env.color, PRIMARY_FONT_BOLD, 44);
+
+  // search (desktop only)
+  let cursorX = w - 48 - 12;
+  if (!isTablet) {
+    const sx = badgeX + 80;
+    const sw = Math.max(200, w - sx - 280);
+    const search = createFrame(frame, "search", sx, 14, sw, 36, "#F5F0ED", "#E8E0DB");
+    search.cornerRadius = 8;
+    createText(search, "⚲", 12, 9, 14, "#7A6058");
+    createText(search, "Search users, orders, tickets…", 36, 10, 12, "#A89A92", PRIMARY_FONT, sw - 48);
+  }
+
+  // avatar (rightmost)
+  const av = createFrame(frame, "avatar", w - 48, 14, 36, 36, "#E05820");
+  av.cornerRadius = 18;
+  createText(av, "AK", 9, 10, 12, "#FFFFFF", PRIMARY_FONT_BOLD, 24);
+  cursorX = w - 48 - 12;
+
+  // action buttons (per-screen)
+  const ACTIONS = {
+    "A02": [["+ Add user", "primary"]],
+    "A04": [["Export CSV", "secondary"], ["+ New order", "primary"]],
+    "A08": [["+ New plan", "primary"]],
+    "A09": [["Save changes", "primary"]],
+    "A10": [["Audit log", "secondary"]],
+    "A11": [["Drain mode", "secondary"], ["+ Add server", "primary"]],
+    "A14": [["+ New campaign", "primary"]],
+    "A16": [["+ Compose", "primary"]],
+    "A18": [["+ Invite admin", "primary"]],
+    "A19": [["Export ledger", "secondary"], ["Mark reconciled", "primary"]]
+  };
+  const acts = ACTIONS[id] || [];
+  for (let i = acts.length - 1; i >= 0; i--) {
+    const [label, kind] = acts[i];
+    const bw = label.length * 7 + 28;
+    cursorX -= bw + 8;
+    const isPrimary = kind === "primary";
+    const btn = createFrame(frame, `action-${label}`, cursorX, 14, bw, 36, isPrimary ? "#E05820" : "#FFFFFF", isPrimary ? null : "#E8E0DB");
+    btn.cornerRadius = 8;
+    createText(btn, label, 14, 11, 12, isPrimary ? "#FFFFFF" : "#1C0804", PRIMARY_FONT_BOLD, bw - 28);
+  }
   // KPI strip
   const kpiY = 88, kpiW = isTablet ? 160 : 240;
   const kpis = [
@@ -515,23 +622,55 @@ async function createStyles() {
 async function buildDesignSystemPage(page) {
   clearGeneratedChildren(page);
   createText(page, "Roamlu Design System", 0, -120, 32, "#1C0804", PRIMARY_FONT_BOLD);
-  createText(page, GENERATION_NOTE, 0, -72, 16, "#7A6058", PRIMARY_FONT, 900);
-  createSection(page, "Section A — Color Tokens", 0, 0, 1700, 900);
-  createSection(page, "Section B — Typography", 0, 980, 1700, 900);
-  createSection(page, "Section C — Spacing & Radius", 0, 1960, 1700, 720);
-  createSection(page, "Section D — Icons & Illustrations", 0, 2760, 1700, 720);
+  createText(page, GENERATION_NOTE, 0, -72, 16, "#7A6058", PRIMARY_FONT, 1200);
+  createSection(page, "Section A — Color Tokens", 0, 0, 1700, 1100);
+  createSection(page, "Section B — Typography", 0, 1160, 1700, 1280);
+  createSection(page, "Section C — Spacing · Radius · Layout", 0, 2480, 1700, 760);
+  createSection(page, "Section D — Icons & Illustrations", 0, 3280, 1700, 540);
 
-  let sx = 40, sy = 80;
-  for (const t of PAINT_TOKENS) {
-    const card = createFrame(page, t.name, sx, sy, 220, 160, "#FFFFFF", "#E8E0DB");
-    card.cornerRadius = 12;
-    createText(card, t.name, 16, 12, 11, "#1C0804");
-    createRect(card, 16, 36, 88, 88, t.light, 8);
-    createRect(card, 116, 36, 88, 88, t.dark, 8);
-    createText(card, "L", 50, 132, 10, "#7A6058");
-    createText(card, "D", 152, 132, 10, "#7A6058");
-    sx += 240; if (sx > 1400) { sx = 40; sy += 180; }
+  // Section A — Color Tokens — grouped by semantic role
+  const colorGroups = [
+    { label: "BRAND", names: ["color/brand/orange","color/brand/teal","color/brand/purple"] },
+    { label: "SURFACE", names: ["color/bg/app","color/bg/surface","color/bg/surface-2","color/border/default"] },
+    { label: "TEXT", names: ["color/text/primary","color/text/secondary","color/text/disabled"] },
+    { label: "SEMANTIC", names: ["color/semantic/success","color/semantic/warning","color/semantic/error"] }
+  ];
+  let sy = 80;
+  for (const g of colorGroups) {
+    createText(page, g.label, 40, sy, 11, "#7A6058", PRIMARY_FONT_BOLD, 200);
+    let sx = 40; sy += 24;
+    for (const tn of g.names) {
+      const t = PAINT_TOKENS.find(p => p.name === tn);
+      if (!t) continue;
+      const card = createFrame(page, t.name, sx, sy, 220, 160, "#FFFFFF", "#E8E0DB");
+      card.cornerRadius = 12;
+      createText(card, t.name, 12, 10, 10, "#1C0804", PRIMARY_FONT_BOLD, 200);
+      createRect(card, 12, 32, 92, 92, t.light, 8);
+      createRect(card, 116, 32, 92, 92, t.dark, 8);
+      createText(card, "L · " + t.light, 12, 130, 9, "#7A6058", PRIMARY_FONT, 90);
+      createText(card, "D · " + t.dark, 116, 130, 9, "#7A6058", PRIMARY_FONT, 90);
+      sx += 240;
+    }
+    sy += 180;
   }
+
+  // mini surface preview (light + dark)
+  for (let i = 0; i < 2; i++) {
+    const dark = i === 1;
+    const px = 40 + i * 540;
+    const py = sy;
+    const prev = createFrame(page, dark ? "preview-dark" : "preview-light", px, py, 520, 220, dark ? "#181210" : "#FFF8F4", dark ? "#2A1E18" : "#E8E0DB");
+    prev.cornerRadius = 12;
+    createText(prev, dark ? "DARK · BG/APP" : "LIGHT · BG/APP", 16, 14, 9, dark ? "#A8978E" : "#7A6058", PRIMARY_FONT_BOLD);
+    const card = createFrame(prev, "card", 16, 40, 488, 110, dark ? "#221A16" : "#FFE8DC", dark ? "#2A1E18" : "#E8E0DB");
+    card.cornerRadius = 10;
+    createText(card, "Active eSIM", 16, 12, 16, dark ? "#F8EAD8" : "#1C0804", PRIMARY_FONT_BOLD);
+    createText(card, "UAE · 5 GB · 18 days left", 16, 36, 12, dark ? "#B8A098" : "#7A6058", PRIMARY_FONT);
+    const cta = createFrame(prev, "cta", 16, 162, 488, 44, "#E05820");
+    cta.cornerRadius = 10;
+    createText(cta, "Top up data", 16, 14, 14, "#FFFFFF", PRIMARY_FONT_BOLD, 200);
+  }
+  sy += 240;
 
   // Section B — Typography
   let ty = 1060;
@@ -581,10 +720,109 @@ async function buildDesignSystemPage(page) {
   }
 }
 
+function drawComponentSpec(parent, x, y, w, h, name, variant, render) {
+  const card = createFrame(parent, `${name}/${variant}`, x, y, w, h, "#FFFFFF", "#E8E0DB");
+  card.cornerRadius = 12;
+  // header strip
+  createRect(card, 0, 0, w, 36, "#FFF8F4");
+  createRect(card, 0, 36, w, 1, "#E8E0DB");
+  createText(card, `${name} / ${variant}`, 14, 11, 11, "#1C0804", PRIMARY_FONT_BOLD, w - 28);
+  // light + dark side-by-side
+  const padX = 16, padY = 52;
+  const halfW = (w - padX * 2 - 12) / 2;
+  const innerH = h - padY - 16;
+  const light = createFrame(card, `light`, padX, padY, halfW, innerH, "#FFFFFF", "#E8E0DB");
+  light.cornerRadius = 8;
+  const dark  = createFrame(card, `dark`,  padX + halfW + 12, padY, halfW, innerH, "#181210", "#2A1E18");
+  dark.cornerRadius = 8;
+  if (render) { render(light, halfW, innerH, false); render(dark, halfW, innerH, true); }
+  return card;
+}
+
+const COMPONENT_GROUPS = [
+  { name: "Buttons & inputs", items: [
+    { name: "button", variant: "primary",       h: 120, render: (p,w,h,d) => { const b=createFrame(p,"btn",16,(h-44)/2,w-32,44,"#E05820"); b.cornerRadius=22; createText(b,"Continue",16,14,13,"#FFFFFF",PRIMARY_FONT_BOLD,w-64); } },
+    { name: "button", variant: "primary/loading", h: 120, render: (p,w,h,d) => { const b=createFrame(p,"btn",16,(h-44)/2,w-32,44,"#E05820"); b.cornerRadius=22; createRect(b,(w-32)/2-10,14,16,16,"#FFFFFF",8); createText(b,"Loading…",(w-32)/2+12,14,13,"#FFFFFF",PRIMARY_FONT_BOLD,80); } },
+    { name: "button", variant: "secondary",     h: 120, render: (p,w,h,d) => { const b=createFrame(p,"btn",16,(h-44)/2,w-32,44,d?"#221A16":"#FFFFFF",d?"#3A2D26":"#E05820"); b.cornerRadius=22; createText(b,"Edit profile",16,14,13,"#E05820",PRIMARY_FONT_BOLD,w-64); } },
+    { name: "button", variant: "ghost",         h: 120, render: (p,w,h,d) => { createText(p,"Skip for now ›",16,(h-20)/2,13,"#7A6058",PRIMARY_FONT_BOLD,w-32); } },
+    { name: "input",  variant: "text",          h: 140, render: (p,w,h,d) => { const b=createFrame(p,"in",16,16,w-32,56,d?"#221A16":"#FFFFFF",d?"#3A2D26":"#E8E0DB"); b.cornerRadius=10; createText(b,"Full name",12,8,10,d?"#A8978E":"#7A6058"); createText(b,"Sara Al-Mansoori",12,28,14,d?"#FFF8F4":"#1C0804",PRIMARY_FONT,w-56); } },
+    { name: "input",  variant: "text/error",    h: 140, render: (p,w,h,d) => { const b=createFrame(p,"in",16,16,w-32,56,d?"#221A16":"#FFFFFF","#DC2626"); b.cornerRadius=10; createText(b,"Email",12,8,10,"#DC2626"); createText(b,"sara@",12,28,14,d?"#FFF8F4":"#1C0804",PRIMARY_FONT,w-56); createText(p,"Enter a valid email address",16,80,11,"#DC2626",PRIMARY_FONT,w-32); } },
+    { name: "input",  variant: "password",      h: 140, render: (p,w,h,d) => { const b=createFrame(p,"in",16,16,w-32,56,d?"#221A16":"#FFFFFF",d?"#3A2D26":"#E8E0DB"); b.cornerRadius=10; createText(b,"Password",12,8,10,d?"#A8978E":"#7A6058"); createText(b,"••••••••",12,28,14,d?"#FFF8F4":"#1C0804",PRIMARY_FONT); createText(b,"👁",w-56,24,16,d?"#A8978E":"#7A6058"); } },
+    { name: "input",  variant: "phone/gulf",    h: 140, render: (p,w,h,d) => { const b=createFrame(p,"in",16,16,w-32,56,d?"#221A16":"#FFFFFF",d?"#3A2D26":"#E8E0DB"); b.cornerRadius=10; createText(b,"🇸🇦 +966",12,18,14,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createRect(b,82,16,1,40,d?"#3A2D26":"#E8E0DB"); createText(b,"5 1 234 5678",94,18,14,d?"#FFF8F4":"#1C0804",PRIMARY_FONT,w-128); } },
+    { name: "input",  variant: "otp/2fa",       h: 140, render: (p,w,h,d) => { const cells=6; const cw=(w-32-(cells-1)*8)/cells; for(let i=0;i<cells;i++){ const b=createFrame(p,`d${i}`,16+i*(cw+8),(h-56)/2,cw,56,d?"#221A16":"#FFFFFF",d?"#3A2D26":"#E8E0DB"); b.cornerRadius=10; if(i<3) createText(b,String(i+1),(cw-10)/2,16,18,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); } } }
+  ]},
+  { name: "Cards & navigation", items: [
+    { name: "card",   variant: "plan",          h: 220, render: (p,w,h,d) => { const b=createFrame(p,"plan",16,16,w-32,h-32,d?"#241B18":"#FFFFFF",d?"#3A2D26":"#E8E0DB"); b.cornerRadius=12; createText(b,"UAE · 5 GB · 7 days",16,14,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(b,"Etisalat · 5G · hotspot",16,36,11,d?"#A8978E":"#7A6058"); createText(b,"AED 89",16,72,28,"#E05820",PRIMARY_FONT_BOLD); createText(b,"~ 24 USD",16,108,11,d?"#A8978E":"#7A6058"); } },
+    { name: "card",   variant: "plan/recommended", h: 220, render: (p,w,h,d) => { const b=createFrame(p,"plan",16,16,w-32,h-32,d?"#241B18":"#FFFFFF","#8040D0"); b.cornerRadius=12; const rib=createFrame(b,"rib",0,0,80,20,"#8040D0"); rib.cornerRadius=4; createText(rib,"AI PICK",10,4,9,"#FFFFFF",PRIMARY_FONT_BOLD); createText(b,"UAE · 5 GB · 7 days",16,28,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(b,"AED 89",16,80,28,"#8040D0",PRIMARY_FONT_BOLD); } },
+    { name: "card",   variant: "feature",       h: 180, render: (p,w,h,d) => { const b=createFrame(p,"f",16,16,w-32,h-32,d?"#241B18":"#FFE8DC"); b.cornerRadius=12; createRect(b,16,16,40,40,"#E05820",10); createText(b,"AI Advisor",68,20,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(b,"Get plan picks for your trip",68,42,11,d?"#A8978E":"#7A6058"); } },
+    { name: "card",   variant: "active-plan",   h: 200, render: (p,w,h,d) => { const b=createFrame(p,"ap",16,16,w-32,h-32,d?"#241B18":"#FFFFFF",d?"#3A2D26":"#E8E0DB"); b.cornerRadius=12; createText(b,"UAE 10 GB",16,14,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(b,"6.2 GB left · 4 days",16,36,11,d?"#A8978E":"#7A6058"); createRect(b,16,72,w-64,8,d?"#3A2D26":"#F5F0ED",4); createRect(b,16,72,(w-64)*0.62,8,"#10A890",4); createText(b,"Top up",16,h-64,12,"#E05820",PRIMARY_FONT_BOLD); } },
+    { name: "card",   variant: "transaction",   h: 140, render: (p,w,h,d) => { const b=createFrame(p,"tx",16,16,w-32,h-32,d?"#241B18":"#FFFFFF",d?"#3A2D26":"#E8E0DB"); b.cornerRadius=10; createText(b,"UAE 10 GB · 6 Jun",14,12,12,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(b,"Visa •• 4242",14,32,11,d?"#A8978E":"#7A6058"); createText(b,"AED 89.00",w-100,18,14,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); } },
+    { name: "badge",  variant: "status",        h: 120, render: (p,w,h,d) => { const tones=[["Active","#16A34A"],["Expiring","#D97706"],["Failed","#DC2626"],["Connecting","#2563EB"]]; let bx=12; for(const [l,c] of tones){ const bw=l.length*7+24; const b=createFrame(p,`s-${l}`,bx,(h-22)/2,bw,22,c+"22",c); b.cornerRadius=11; createText(b,l,10,3,11,c,PRIMARY_FONT_BOLD,bw-20); bx+=bw+6;} } },
+    { name: "badge",  variant: "tag",           h: 120, render: (p,w,h,d) => { const tags=[["5G","#E05820"],["VPN","#10A890"],["AI pick","#8040D0"]]; let bx=12; for(const [l,c] of tags){ const bw=l.length*7+20; const b=createFrame(p,`t-${l}`,bx,(h-20)/2,bw,20,c); b.cornerRadius=4; createText(b,l,8,3,10,"#FFFFFF",PRIMARY_FONT_BOLD,bw-16); bx+=bw+6;} } },
+    { name: "nav",    variant: "bottom",        h: 140, render: (p,w,h,d) => { const labels=["Home","eSIM","Connect","Account"]; const tw=(w-32)/4; for(let i=0;i<4;i++){ createRect(p,16+i*tw+(tw-24)/2,(h-44)/2,24,24,i===0?"#E05820":(d?"#A8978E":"#7A6058"),6); createText(p,labels[i],16+i*tw,(h-44)/2+30,10,i===0?"#E05820":(d?"#A8978E":"#7A6058"),PRIMARY_FONT_BOLD,tw); } } },
+    { name: "nav",    variant: "bottom/esim-active", h: 140, render: (p,w,h,d) => { const labels=["Home","eSIM","Connect","Account"]; const tw=(w-32)/4; for(let i=0;i<4;i++){ createRect(p,16+i*tw+(tw-24)/2,(h-44)/2,24,24,i===1?"#E05820":(d?"#A8978E":"#7A6058"),6); createText(p,labels[i],16+i*tw,(h-44)/2+30,10,i===1?"#E05820":(d?"#A8978E":"#7A6058"),PRIMARY_FONT_BOLD,tw); } } },
+    { name: "nav",    variant: "top-app-bar",   h: 120, render: (p,w,h,d) => { createText(p,"‹",16,(h-44)/2+10,22,d?"#FFF8F4":"#1C0804"); createText(p,"My eSIMs",48,(h-44)/2+14,16,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD,w-96); } },
+    { name: "sheet",  variant: "bottom",        h: 220, render: (p,w,h,d) => { createRect(p,(w-40)/2,12,40,4,d?"#3A2D26":"#E8E0DB",2); createText(p,"Confirm purchase",16,32,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(p,"AED 89.00 · UAE 10 GB",16,56,12,d?"#A8978E":"#7A6058"); const b=createFrame(p,"cta",16,h-60,w-32,44,"#E05820"); b.cornerRadius=22; createText(b,"Pay with Apple Pay",16,14,13,"#FFFFFF",PRIMARY_FONT_BOLD,w-64); } },
+    { name: "toggle", variant: "switch",        h: 100, render: (p,w,h,d) => { const t=createFrame(p,"sw",16,(h-32)/2,60,32,"#10A890"); t.cornerRadius=16; createRect(t,32,4,24,24,"#FFFFFF",12); const o=createFrame(p,"swo",96,(h-32)/2,60,32,d?"#3A2D26":"#E8E0DB"); o.cornerRadius=16; createRect(o,4,4,24,24,"#FFFFFF",12); } },
+    { name: "toggle", variant: "plan-type",     h: 100, render: (p,w,h,d) => { const b=createFrame(p,"seg",16,(h-40)/2,w-32,40,d?"#221A16":"#F5F0ED"); b.cornerRadius=20; const seg=createFrame(b,"on",4,4,(w-40)/2,32,"#E05820"); seg.cornerRadius=16; createText(seg,"PAYG",16,8,12,"#FFFFFF",PRIMARY_FONT_BOLD,80); createText(b,"Monthly",4+(w-40)/2+16,12,12,d?"#A8978E":"#7A6058",PRIMARY_FONT_BOLD); } },
+    { name: "chip",   variant: "filter",        h: 100, render: (p,w,h,d) => { const tags=[["All",true],["Gulf",false],["Europe",false],["Asia",false]]; let bx=12; for(const [l,a] of tags){ const bw=l.length*7+24; const b=createFrame(p,`c-${l}`,bx,(h-28)/2,bw,28,a?"#E05820":(d?"#221A16":"#FFFFFF"),a?null:(d?"#3A2D26":"#E8E0DB")); b.cornerRadius=14; createText(b,l,12,7,11,a?"#FFFFFF":(d?"#FFF8F4":"#1C0804"),PRIMARY_FONT_BOLD,bw-24); bx+=bw+6;} } },
+    { name: "avatar", variant: "default",       h: 120, render: (p,w,h,d) => { const sizes=[[32,"SA","#E05820"],[40,"RA","#8040D0"],[56,"MA","#10A890"]]; let bx=16,by=h/2; for(const [s,t,c] of sizes){ const a=createFrame(p,`av-${t}`,bx,by-s/2,s,s,c); a.cornerRadius=s/2; createText(a,t,(s-18)/2,(s-16)/2,s/3,"#FFFFFF",PRIMARY_FONT_BOLD,s); bx+=s+12;} } }
+  ]},
+  { name: "Core product", items: [
+    { name: "vpn",    variant: "power/disconnected", h: 240, render: (p,w,h,d) => { const cx=w/2,cy=h/2; const ring=createFrame(p,"ring",cx-60,cy-60,120,120,d?"#221A16":"#F5F0ED",d?"#3A2D26":"#E8E0DB"); ring.cornerRadius=60; createText(ring,"⏻",46,38,40,d?"#A8978E":"#7A6058"); createText(p,"Tap to connect",cx-60,cy+76,12,d?"#A8978E":"#7A6058",PRIMARY_FONT_BOLD,120); } },
+    { name: "vpn",    variant: "power/connected",    h: 240, render: (p,w,h,d) => { const cx=w/2,cy=h/2; const ring=createFrame(p,"ring",cx-60,cy-60,120,120,"#10A890"); ring.cornerRadius=60; createText(ring,"⏻",46,38,40,"#FFFFFF"); createText(p,"Protected · 12 ms",cx-70,cy+76,12,"#10A890",PRIMARY_FONT_BOLD,140); } },
+    { name: "data",   variant: "progress-ring",      h: 240, render: (p,w,h,d) => { const cx=w/2,cy=h/2; const r=createFrame(p,"r",cx-50,cy-50,100,100,"#E05820"); r.cornerRadius=50; const inner=createFrame(r,"i",10,10,80,80,d?"#181210":"#FFFFFF"); inner.cornerRadius=40; createText(inner,"6.2",18,18,22,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD,60); createText(inner,"of 10 GB",16,46,10,d?"#A8978E":"#7A6058",PRIMARY_FONT,60); } },
+    { name: "row",    variant: "country",            h: 200, render: (p,w,h,d) => { const rows=[["🇸🇦","Saudi Arabia","$7.90",true],["🇦🇪","UAE","$8.50",false],["🇶🇦","Qatar","$9.20",false]]; for(let i=0;i<rows.length;i++){ const ry=12+i*54; const b=createFrame(p,`r${i}`,12,ry,w-24,46,d?"#241B18":"#FFFFFF",d?"#3A2D26":"#E8E0DB"); b.cornerRadius=8; createText(b,rows[i][0],12,12,18,d?"#FFF8F4":"#1C0804"); createText(b,rows[i][1],44,10,12,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD,w-160); createText(b,"from "+rows[i][2],44,28,10,d?"#A8978E":"#7A6058"); if(rows[i][3]){ const tag=createFrame(b,"pop",w-72,12,52,20,"#E05820"); tag.cornerRadius=10; createText(tag,"Popular",6,4,9,"#FFFFFF",PRIMARY_FONT_BOLD,46);} } } },
+    { name: "row",    variant: "server",             h: 200, render: (p,w,h,d) => { const rows=[["🇦🇪","Dubai",28,32,true],["🇸🇦","Riyadh",42,58,false],["🇬🇧","London",86,84,false]]; for(let i=0;i<rows.length;i++){ const ry=12+i*54; const b=createFrame(p,`s${i}`,12,ry,w-24,46,rows[i][4]?(d?"#3A2D26":"#FFE8DC"):(d?"#241B18":"#FFFFFF"),d?"#3A2D26":"#E8E0DB"); b.cornerRadius=8; createText(b,rows[i][0],12,12,18,d?"#FFF8F4":"#1C0804"); createText(b,rows[i][1],44,14,12,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD,w-180); createText(b,rows[i][2]+" ms",w-110,16,11,d?"#A8978E":"#7A6058"); createText(b,rows[i][3]+"%",w-50,16,11,d?"#A8978E":"#7A6058"); } } },
+    { name: "ai",     variant: "chat-bubble",        h: 220, render: (p,w,h,d) => { const msgs=[[true,"Going to Dubai for 6 days? I'd grab the UAE 5GB pack."],[false,"Will it work in Abu Dhabi too?"],[true,"Yes, full UAE coverage."]]; let by=12; for(const [a,t] of msgs){ const tw=Math.min(w-40,t.length*5.5+24); const bx=a?12:w-tw-12; const b=createFrame(p,"m",bx,by,tw,38,a?(d?"#3A2D26":"#FFE8DC"):"#E05820"); b.cornerRadius=14; createText(b,t,12,8,11,a?(d?"#FFF8F4":"#1C0804"):"#FFFFFF",PRIMARY_FONT,tw-24); by+=46;} } },
+    { name: "card",   variant: "loyalty",            h: 200, render: (p,w,h,d) => { const b=createFrame(p,"l",16,16,w-32,h-32,"#8040D0"); b.cornerRadius=12; createText(b,"Roamlu Silver",16,14,11,"#FFFFFF80",PRIMARY_FONT_BOLD); createText(b,"2,140 pts",16,32,28,"#FFFFFF",PRIMARY_FONT_BOLD); createText(b,"~ AED 21.40",16,72,12,"#FFFFFFAA"); } },
+    { name: "card",   variant: "referral",           h: 200, render: (p,w,h,d) => { const b=createFrame(p,"r",16,16,w-32,h-32,d?"#241B18":"#FFFFFF",d?"#3A2D26":"#E8E0DB"); b.cornerRadius=12; createText(b,"Earn 500 pts",16,14,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(b,"per friend who joins",16,36,11,d?"#A8978E":"#7A6058"); const code=createFrame(b,"code",16,72,w-64,40,d?"#181210":"#FFE8DC"); code.cornerRadius=8; createText(code,"LAYLA-RM92",12,12,14,"#E05820",PRIMARY_FONT_BOLD); } },
+    { name: "loading",variant: "shimmer",            h: 160, render: (p,w,h,d) => { for(let i=0;i<3;i++){ createRect(p,16,16+i*36,w-32,16,d?"#3A2D26":"#F5F0ED",4); createRect(p,16,36+i*36,(w-32)*0.6,8,d?"#3A2D26":"#F5F0ED",4); } } }
+  ]},
+  { name: "System & compliance", items: [
+    { name: "prompt", variant: "biometric",          h: 220, render: (p,w,h,d) => { const cx=w/2,cy=h/2; createRect(p,cx-32,cy-44,64,64,d?"#3A2D26":"#FFE8DC",16); createText(p,"😊",cx-18,cy-32,32); createText(p,"Use Face ID?",cx-50,cy+32,14,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD,100); } },
+    { name: "overlay",variant: "session-timeout",    h: 200, render: (p,w,h,d) => { createText(p,"Session timed out",16,18,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(p,"Re-authenticate to continue.",16,42,11,d?"#A8978E":"#7A6058"); const b=createFrame(p,"a",16,h-60,w-32,44,"#E05820"); b.cornerRadius=22; createText(b,"Sign in again",16,14,13,"#FFFFFF",PRIMARY_FONT_BOLD,w-64); } },
+    { name: "webview",variant: "3ds",                h: 200, render: (p,w,h,d) => { createRect(p,16,16,w-32,28,d?"#3A2D26":"#F5F0ED",6); createText(p,"🔒 secure-bank.com",24,22,11,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(p,"Confirm AED 89.00",16,60,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(p,"Reference RM-A4F-0192",16,84,11,d?"#A8978E":"#7A6058"); } },
+    { name: "state",  variant: "empty",              h: 200, render: (p,w,h,d) => { createRect(p,(w-64)/2,28,64,64,d?"#3A2D26":"#FFE8DC",32); createText(p,"No eSIMs yet",16,108,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD,w-32); createText(p,"Browse plans to get started",16,132,11,d?"#A8978E":"#7A6058",PRIMARY_FONT,w-32); } },
+    { name: "state",  variant: "error",              h: 200, render: (p,w,h,d) => { createRect(p,(w-64)/2,28,64,64,"#DC262622",32); createText(p,"⚠",(w-20)/2,40,32,"#DC2626"); createText(p,"Something went wrong",16,108,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD,w-32); createText(p,"Try again or contact support",16,132,11,d?"#A8978E":"#7A6058",PRIMARY_FONT,w-32); } },
+    { name: "state",  variant: "maintenance",        h: 200, render: (p,w,h,d) => { createText(p,"🛠",(w-20)/2,28,40); createText(p,"We'll be back at 14:00 GST",16,84,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD,w-32); createText(p,"Billing & VPN unaffected",16,108,11,d?"#A8978E":"#7A6058",PRIMARY_FONT,w-32); } },
+    { name: "banner", variant: "info",               h: 140, render: (p,w,h,d) => { const b=createFrame(p,"bn",12,12,w-24,h-24,"#2563EB22","#2563EB"); b.cornerRadius=10; createText(b,"Captive portal detected",12,10,12,"#2563EB",PRIMARY_FONT_BOLD); createText(b,"Open hotel.wifi to sign in.",12,30,11,d?"#A8978E":"#1C0804",PRIMARY_FONT,w-48); } },
+    { name: "banner", variant: "warning",            h: 140, render: (p,w,h,d) => { const b=createFrame(p,"bn",12,12,w-24,h-24,"#D9770622","#D97706"); b.cornerRadius=10; createText(b,"VPN reconnecting",12,10,12,"#D97706",PRIMARY_FONT_BOLD); createText(b,"Switching to Dubai.",12,30,11,d?"#A8978E":"#1C0804",PRIMARY_FONT,w-48); } },
+    { name: "banner", variant: "error",              h: 140, render: (p,w,h,d) => { const b=createFrame(p,"bn",12,12,w-24,h-24,"#DC262622","#DC2626"); b.cornerRadius=10; createText(b,"Payment timed out",12,10,12,"#DC2626",PRIMARY_FONT_BOLD); createText(b,"No charge was made.",12,30,11,d?"#A8978E":"#1C0804",PRIMARY_FONT,w-48); } },
+    { name: "sheet",  variant: "consent",            h: 220, render: (p,w,h,d) => { createRect(p,(w-40)/2,12,40,4,d?"#3A2D26":"#E8E0DB",2); createText(p,"Your privacy",16,32,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(p,"Required · Analytics · Marketing",16,56,11,d?"#A8978E":"#7A6058",PRIMARY_FONT,w-32); const b=createFrame(p,"a",16,h-60,w-32,44,"#E05820"); b.cornerRadius=22; createText(b,"Accept all",16,14,13,"#FFFFFF",PRIMARY_FONT_BOLD,w-64); } },
+    { name: "notice", variant: "refund",             h: 160, render: (p,w,h,d) => { const b=createFrame(p,"n",12,12,w-24,h-24,d?"#3A2D26":"#FFE8DC"); b.cornerRadius=10; createText(b,"Refund policy",12,10,12,"#D97706",PRIMARY_FONT_BOLD); createText(b,"Refunds available pre-install only · 7-day window for technical failure.",12,30,11,d?"#FFF8F4":"#1C0804",PRIMARY_FONT,w-48); } },
+    { name: "card",   variant: "plan-expired",       h: 160, render: (p,w,h,d) => { const b=createFrame(p,"x",16,16,w-32,h-32,d?"#241B18":"#FFFFFF","#DC2626"); b.cornerRadius=12; createText(b,"UAE 10 GB · Expired",14,12,14,"#DC2626",PRIMARY_FONT_BOLD); createText(b,"Top up to keep your number",14,34,11,d?"#A8978E":"#7A6058"); } }
+  ]},
+  { name: "Voice & call", items: [
+    { name: "call",   variant: "active-controls",    h: 220, render: (p,w,h,d) => { createText(p,"Salim",16,18,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(p,"04:12 · HD voice",16,40,11,d?"#A8978E":"#7A6058"); const labels=["Mute","Speaker","Add"]; for(let i=0;i<3;i++){ const cx=16+i*((w-32)/3); const c=createFrame(p,labels[i],cx+10,h-72,((w-32)/3)-20,40,d?"#3A2D26":"#F5F0ED"); c.cornerRadius=20; createText(c,labels[i],10,12,11,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD,((w-32)/3)-40); } const e=createFrame(p,"end",(w-80)/2,h-32,80,28,"#DC2626"); e.cornerRadius=14; createText(e,"End",26,6,12,"#FFFFFF",PRIMARY_FONT_BOLD,40); } },
+    { name: "call",   variant: "incoming",           h: 220, render: (p,w,h,d) => { createText(p,"Salim Al-Maktoum",16,18,15,d?"#FFF8F4":"#1C0804",PRIMARY_FONT_BOLD); createText(p,"+971 50 222 1188 · Roamlu",16,40,11,d?"#A8978E":"#7A6058"); const a=createFrame(p,"acc",16,h-60,(w-40)/2,44,"#10A890"); a.cornerRadius=22; createText(a,"Accept",((w-40)/2-44)/2,14,13,"#FFFFFF",PRIMARY_FONT_BOLD,80); const dec=createFrame(p,"dec",24+(w-40)/2,h-60,(w-40)/2,44,"#DC2626"); dec.cornerRadius=22; createText(dec,"Decline",((w-40)/2-50)/2,14,13,"#FFFFFF",PRIMARY_FONT_BOLD,80); } }
+  ]}
+];
+
 async function buildComponentsPage(page) {
   clearGeneratedChildren(page);
   createText(page, "Roamlu Components", 0, -120, 32, "#1C0804", PRIMARY_FONT_BOLD);
-  createText(page, "Auto Layout · light + dark + RTL variants required", 0, -72, 16, "#7A6058", PRIMARY_FONT, 900);
+  createText(page, "Each spec renders light + dark side-by-side · named [category]/[name]/[variant]", 0, -72, 14, "#7A6058", PRIMARY_FONT, 1200);
+  const PAGE_W = 1620, GAP = 24;
+  const COL_W = (PAGE_W - GAP * 2) / 2;
+  let y = 0;
+  for (const g of COMPONENT_GROUPS) {
+    createText(page, `${g.name.toUpperCase()} · ${g.items.length}`, 0, y, 13, "#7A6058", PRIMARY_FONT_BOLD, PAGE_W);
+    y += 36;
+    let col = 0, rowMaxH = 0, rowY = y;
+    for (const it of g.items) {
+      const cardH = (it.h || 200) + 60;
+      const x = col * (COL_W + GAP);
+      drawComponentSpec(page, x, rowY, COL_W, cardH, it.name, it.variant, it.render);
+      rowMaxH = Math.max(rowMaxH, cardH);
+      col++;
+      if (col >= 2) { col = 0; rowY += rowMaxH + GAP; rowMaxH = 0; }
+    }
+    if (col > 0) rowY += rowMaxH + GAP;
+    y = rowY + 20;
+  }
+
+  // Skip the legacy `sections` block
   const sections = [
     {
       name: "Buttons & Inputs", y: 0,
@@ -633,6 +871,7 @@ async function buildComponentsPage(page) {
     }
   ];
 
+  return;
   for (const s of sections) {
     createSection(page, s.name, 0, s.y, 1620, 720);
     let x = 40, y = s.y + 80;
@@ -722,17 +961,23 @@ async function buildMobilePage(page, screens) {
 async function buildAdminPage(page) {
   clearGeneratedChildren(page);
   createText(page, "Roamlu Admin Web", 0, -120, 32, "#1C0804", PRIMARY_FONT_BOLD);
-  createText(page, "Desktop 1440 · Tablet 768", 0, -72, 16, "#7A6058", PRIMARY_FONT, 900);
-  const rowHeight = 1060;
+  createText(page, "20 screens × desktop (1440) + tablet (768) × sidebar open + closed = 80 frames", 0, -72, 16, "#7A6058", PRIMARY_FONT, 1400);
+  const rowHeight = 1080;
+  const variants = [
+    { suffix: "desktop/open",   x: 0,    w: 1440, h: 900,  isTablet: false, open: true  },
+    { suffix: "desktop/closed", x: 1500, w: 1440, h: 900,  isTablet: false, open: false },
+    { suffix: "tablet/open",    x: 3000, w: 768,  h: 1024, isTablet: true,  open: true  },
+    { suffix: "tablet/closed",  x: 3820, w: 768,  h: 1024, isTablet: true,  open: false }
+  ];
   for (let i = 0; i < ADMIN_SCREENS.length; i++) {
     const [id, title, priority] = ADMIN_SCREENS[i];
     const y = 40 + i * rowHeight;
-    createText(page, `${id} — ${title} — ${priority}`, 0, y, 18, "#1C0804", PRIMARY_FONT_BOLD, 900);
+    createText(page, `${id} — ${title} — ${priority}`, 0, y, 18, "#1C0804", PRIMARY_FONT_BOLD, 1200);
     const slug = slugify(title);
-    const desktop = createFrame(page, `${id}/${slug}/desktop`, 0, y + 40, 1440, 900, "#F5F0ED");
-    const tablet  = createFrame(page, `${id}/${slug}/tablet`, 1500, y + 96, 768, 960, "#F5F0ED");
-    drawAdminChrome(desktop, id, title, false);
-    drawAdminChrome(tablet, id, title, true);
+    for (const v of variants) {
+      const f = createFrame(page, `${id}/${slug}/${v.suffix}`, v.x, y + 40, v.w, v.h, "#F5F0ED");
+      drawAdminChrome(f, id, title, v.isTablet, v.open);
+    }
   }
 }
 

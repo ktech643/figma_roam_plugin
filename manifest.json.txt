@@ -9,8 +9,65 @@
   "menu": [
     { "name": "Build all", "command": "all" },
     { "separator": true },
-    { "name": "Mobile (Design System + Components + 11 mobile pages)", "command": "mobile" },
-    { "name": "Admin Web (20 screens × 80 frames)", "command": "admin" },
-    { "name": "Backend specs (B0–R1 + Prototype + Handoff)", "command": "backend" }
+    { "name": "FOUNDATIONS", "menu": [
+      { "name": "DS · Design System", "command": "page:ds" },
+      { "name": "CMP · Components", "command": "page:cmp" },
+      { "name": "A11Y · Accessibility", "command": "page:a11y" }
+    ]},
+    { "name": "MOBILE", "menu": [
+      { "name": "01 · Onboarding", "command": "page:01" },
+      { "name": "02 · Auth", "command": "page:02" },
+      { "name": "03 · Home", "command": "page:03" },
+      { "name": "04 · eSIM", "command": "page:04" },
+      { "name": "05 · VoIP", "command": "page:05" },
+      { "name": "06 · VPN", "command": "page:06" },
+      { "name": "07 · AI", "command": "page:07" },
+      { "name": "08 · Billing", "command": "page:08" },
+      { "name": "09 · Loyalty", "command": "page:09" },
+      { "name": "10 · Account", "command": "page:10" },
+      { "name": "11 · System", "command": "page:11" }
+    ]},
+    { "name": "WEB", "menu": [
+      { "name": "12 · Admin Web (build all)", "command": "page:12" },
+      { "separator": true },
+      { "name": "Operations", "menu": [
+        { "name": "▣  Dashboard",      "command": "admin:A01" },
+        { "name": "👥  Users",          "command": "admin:A02" },
+        { "name": "▤  eSIM Orders",    "command": "admin:A04" },
+        { "name": "📞  VoIP Numbers",   "command": "admin:A05" },
+        { "name": "🛡  VPN Sessions",   "command": "admin:A06" },
+        { "name": "💬  Support",        "command": "admin:A15" }
+      ]},
+      { "name": "Commerce", "menu": [
+        { "name": "📈  Revenue",        "command": "admin:A07" },
+        { "name": "✦  Plans",          "command": "admin:A08" },
+        { "name": "$  Pricing",        "command": "admin:A09" },
+        { "name": "★  Loyalty",        "command": "admin:A12" },
+        { "name": "↗  Referrals",      "command": "admin:A13" },
+        { "name": "✉  Campaigns",      "command": "admin:A14" },
+        { "name": "Σ  Reconciliation", "command": "admin:A19" }
+      ]},
+      { "name": "Configuration", "menu": [
+        { "name": "⚙  Providers",      "command": "admin:A10" },
+        { "name": "▥  VPN Servers",    "command": "admin:A11" },
+        { "name": "🔔  Notifications", "command": "admin:A16" },
+        { "name": "🛠  App Settings",  "command": "admin:A17" },
+        { "name": "🔐  Admin Users",   "command": "admin:A18" }
+      ]}
+    ]},
+    { "name": "BACKEND", "menu": [
+      { "name": "BP · Build Pack Roadmap", "command": "page:bp" },
+      { "name": "B0 · Backend Setup",      "command": "page:b0" },
+      { "name": "B1 · Data Model",         "command": "page:b1" },
+      { "name": "B2 · API Contract",       "command": "page:b2" },
+      { "name": "B3 · Auth & Security",    "command": "page:b3" },
+      { "name": "B4 · Provider Adapters",  "command": "page:b4" },
+      { "name": "B5 · Billing & 3DS",      "command": "page:b5" },
+      { "name": "FL · Finance & Legal",    "command": "page:fl" }
+    ]},
+    { "name": "DELIVERY", "menu": [
+      { "name": "PR · Prototype",     "command": "page:pr" },
+      { "name": "HO · Handoff Notes", "command": "page:ho" }
+    ]}
   ]
 }

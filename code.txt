@@ -5612,22 +5612,86 @@ async function main() {
 
   const byName = Object.fromEntries(figma.root.children.map((p) => [p.name, p]));
   const cmd = figma.command || "all";
-  const runMobile = cmd === "all" || cmd === "mobile";
-  const runAdmin = cmd === "all" || cmd === "admin";
-  const runBackend = cmd === "all" || cmd === "backend";
 
-  if (runMobile) {
+  // Map per-page commands to a single page name, then run only that builder.
+  const PAGE_CMD = {
+    "page:ds": "■ Design System",
+    "page:cmp": "■ Components",
+    "page:a11y": "■ Accessibility & Testing",
+    "page:01": "■ 01 — Onboarding",
+    "page:02": "■ 02 — Auth",
+    "page:03": "■ 03 — Home",
+    "page:04": "■ 04 — eSIM",
+    "page:05": "■ 05 — VoIP",
+    "page:06": "■ 06 — VPN",
+    "page:07": "■ 07 — AI",
+    "page:08": "■ 08 — Billing",
+    "page:09": "■ 09 — Loyalty",
+    "page:10": "■ 10 — Account",
+    "page:11": "■ 11 — System",
+    "page:12": "■ 12 — Admin Web",
+    "page:bp": "■ Review Checklists",
+    "page:b0": "■ B0 — Backend Setup",
+    "page:b1": "■ B1 — Data Model",
+    "page:b2": "■ B2 — API Contract",
+    "page:b3": "■ B3 — Auth & Security",
+    "page:b4": "■ B4 — Provider Adapters",
+    "page:b5": "■ B5 — Billing & 3DS",
+    "page:b6": "■ B6 — Loyalty & Referrals",
+    "page:b7": "■ B7 — AI Advisor",
+    "page:b8": "■ B8 — Admin Backend",
+    "page:fl": "■ FL — Finance & Legal",
+    "page:w1": "■ W1 — Web Admin Frontend",
+    "page:m1": "■ M1 — Flutter Foundation",
+    "page:m2": "■ M2 — Onboarding & Auth",
+    "page:m3": "■ M3 — Home & eSIM",
+    "page:m4": "■ M4 — Connect (VoIP & VPN)",
+    "page:m5": "■ M5 — AI, Billing & Loyalty",
+    "page:m6": "■ M6 — Account, Notifications & System",
+    "page:r1": "■ R1 — Testing, Observability & Handoff",
+    "page:pr": "■ Prototype",
+    "page:ho": "■ Handoff Notes"
+  };
+
+  async function buildOne(pageName) {
+    const p = byName[pageName];
+    if (!p) { figma.notify(`Page not found: ${pageName}`); return; }
+    if (pageName === "■ Design System") return buildDesignSystemPage(p);
+    if (pageName === "■ Components") return buildComponentsPage(p);
+    if (pageName === "■ Accessibility & Testing") return buildAccessibilityPage(p);
+    if (pageName === "■ 12 — Admin Web") return buildAdminPage(p);
+    if (pageName === "■ Prototype") return buildPrototypePage(p);
+    if (pageName === "■ Handoff Notes") return buildHandoffNotesPage(p);
+    const ms = MOBILE_SECTIONS.find(s => s.page === pageName);
+    if (ms) return buildMobilePage(p, ms.screens);
+    const bk = BACKEND_PAGES.find(b => b.name === pageName);
+    if (bk) return buildBackendPage(p, bk);
+  }
+
+  if (cmd === "all") {
     await buildDesignSystemPage(byName["■ Design System"]);
     await buildComponentsPage(byName["■ Components"]);
     for (const s of MOBILE_SECTIONS) await buildMobilePage(byName[s.page], s.screens);
-  }
-  if (runAdmin) {
     await buildAdminPage(byName["■ 12 — Admin Web"]);
-  }
-  if (runBackend) {
     for (const b of BACKEND_PAGES) if (byName[b.name]) await buildBackendPage(byName[b.name], b);
     await buildPrototypePage(byName["■ Prototype"]);
     await buildHandoffNotesPage(byName["■ Handoff Notes"]);
+  } else if (PAGE_CMD[cmd]) {
+    await buildOne(PAGE_CMD[cmd]);
+  } else if (cmd.indexOf("admin:") === 0) {
+    const adminId = cmd.slice(6);
+    const adminPage = byName["■ 12 — Admin Web"];
+    if (adminPage) {
+      await buildAdminPage(adminPage);
+      await figma.setCurrentPageAsync(adminPage);
+      const target = adminPage.children.find((c) => c.name && c.name.indexOf(adminId + "/") === 0 && c.name.indexOf("/desktop/open") !== -1);
+      if (target) {
+        figma.currentPage.selection = [target];
+        figma.viewport.scrollAndZoomIntoView([target]);
+      }
+    }
+  } else {
+    figma.notify(`Unknown command: ${cmd}`);
   }
 
   figma.root.setPluginData("generator", ROOT_MARKER);

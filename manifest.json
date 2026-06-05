@@ -63,9 +63,24 @@
       { "name": "B3 · Auth & Security",    "command": "page:b3" },
       { "name": "B4 · Provider Adapters",  "command": "page:b4" },
       { "name": "B5 · Billing & 3DS",      "command": "page:b5" },
+      { "name": "B6 · Loyalty & Referrals","command": "page:b6" },
+      { "name": "B7 · AI Advisor",         "command": "page:b7" },
+      { "name": "B8 · Admin Backend",      "command": "page:b8" },
       { "name": "FL · Finance & Legal",    "command": "page:fl" }
     ]},
+    { "name": "FLUTTER", "menu": [
+      { "name": "M1 · Flutter Foundation",          "command": "page:m1" },
+      { "name": "M2 · Onboarding & Auth",           "command": "page:m2" },
+      { "name": "M3 · Home & eSIM",                 "command": "page:m3" },
+      { "name": "M4 · Connect (VoIP & VPN)",        "command": "page:m4" },
+      { "name": "M5 · AI, Billing & Loyalty",       "command": "page:m5" },
+      { "name": "M6 · Account, Notifications & System", "command": "page:m6" }
+    ]},
+    { "name": "WEB ADMIN FRONTEND", "menu": [
+      { "name": "W1 · Web Admin Frontend", "command": "page:w1" }
+    ]},
     { "name": "DELIVERY", "menu": [
+      { "name": "R1 · Testing, Observability & Handoff", "command": "page:r1" },
       { "name": "PR · Prototype",     "command": "page:pr" },
       { "name": "HO · Handoff Notes", "command": "page:ho" }
     ]}

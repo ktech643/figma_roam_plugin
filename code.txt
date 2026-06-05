@@ -5,7 +5,7 @@ const ROOT_MARKER = "roamlu-setup-v2";
 const GENERATION_NOTE = "Generated from Roamlu Figma Designer Brief v2.0 and Brand Guide v2.0";
 
 const PAGE_ORDER = [
-  "■ Design System", "■ Components",
+  "■ Design System", "■ Components", "■ Accessibility & Testing",
   "■ 01 — Onboarding", "■ 02 — Auth", "■ 03 — Home", "■ 04 — eSIM",
   "■ 05 — VoIP", "■ 06 — VPN", "■ 07 — AI", "■ 08 — Billing",
   "■ 09 — Loyalty", "■ 10 — Account", "■ 11 — System", "■ 12 — Admin Web",
@@ -5711,6 +5711,7 @@ async function main() {
   if (cmd === "all") {
     await buildDesignSystemPage(byName["■ Design System"]);
     await buildComponentsPage(byName["■ Components"]);
+    if (byName["■ Accessibility & Testing"]) await buildAccessibilityPage(byName["■ Accessibility & Testing"]);
     for (const s of MOBILE_SECTIONS) await buildMobilePage(byName[s.page], s.screens);
     await buildAdminPage(byName["■ 12 — Admin Web"]);
     for (const b of BACKEND_PAGES) if (byName[b.name]) await buildBackendPage(byName[b.name], b);

@@ -371,25 +371,76 @@ async function buildAdminPage(page) {
 
 async function buildPrototypePage(page) {
   clearGeneratedChildren(page);
-  createText(page, "Prototype Flow Map", 0, -120, 32, "#1C0804", PRIMARY_FONT_BOLD);
-  createText(page, "10 client-review journeys — wire connections between matching frame IDs", 0, -72, 16, "#7A6058", PRIMARY_FONT, 1100);
+  const PAGE_W = 1472, COL_GAP = 32;
+  const spec = {
+    kicker: "PROTOTYPE · 10 CLIENT-REVIEW JOURNEYS · WIRED THROUGH AUTH/SESSION/PURCHASE/CONNECT/AI/LOYALTY/SYSTEM",
+    title: "Prototype Flow Map",
+    subtitle: "Wire connections between matching frame IDs · light + dark + RTL variants traversed in dedicated review files · every interactive node maps to its source screen.",
+  };
+  let y = backendHeader(page, spec, PAGE_W);
+
   const journeys = [
-    ["P-01 First-time onboarding", "01 → G-06 → 02 → 03 → 04 → 06 → 07 → 08 → 16"],
-    ["P-02 Returning login + 2FA", "09 → S-02 → 17"],
-    ["P-03 First eSIM purchase", "21 → 22 → 25 → G-08 → 26 → S-07 → 27 → 30"],
-    ["P-04 eSIM top-up", "29 → E-02 → E-03 → 27"],
-    ["P-05 VPN first activation", "39 → G-07 → 40 → 41"],
-    ["P-06 AI → purchase", "44 → 45 → 46 → 48"],
-    ["P-07 Subscription cancel", "51 → B-02 → 51"],
-    ["P-08 GDPR consent trigger", "G-06 → resume route"],
-    ["P-09 Captive portal", "17 → G-10"],
-    ["P-10 Support / recovery", "63 → 64 / 09 → 12 → 13 → S-03 → 17"]
+    { t: "orange",  k: "P-01 · First-time onboarding",     v: "01 → G-06 GDPR → 02 → 03 → 04 → 06 → 07 → 08 → 10 verify → 11 2FA → S-01 → S-03 biometric → 16 Home · consent persisted before progress" },
+    { t: "orange",  k: "P-02 · Returning login + 2FA",     v: "09 login → S-02 2FA challenge → 17 Home · refresh-token rotation · reuse-detection forces full re-auth" },
+    { t: "warning", k: "P-03 · First eSIM purchase",       v: "21 browse → 22 detail → 25 review (G-08 inline refund ack) → 26 PSP → S-07 3DS → 27 success → 30 install · provision ≠ install verified" },
+    { t: "purple",  k: "P-04 · eSIM top-up",               v: "29 my eSIM → E-02 top-up review → E-03 PSP → S-07 3DS → 27 success · idempotent retry · same Idempotency-Key" },
+    { t: "warning", k: "P-05 · VPN first activation",      v: "39 disconnected → G-07 legal disclaimer (persisted) → config issue → 40 connecting → 41 connected · region-disabled refused cleanly" },
+    { t: "purple",  k: "P-06 · AI → purchase",             v: "44 welcome → 45 active chat → 46 recommendation → 25 purchase review (plan + recommendation_id pre-attached) · NEVER charges directly" },
+    { t: "purple",  k: "P-07 · Subscription cancel",       v: "51 my subscription → B-02 cancellation flow (cancel-at-period-end vs immediate) → 51 reflects B5 outcome · audit-logged" },
+    { t: "warning", k: "P-08 · GDPR consent trigger",      v: "G-06 first-launch OR policy-version bump → modal → accept persists versioned → resumes original route · decline = restricted mode per policy class" },
+    { t: "warning", k: "P-09 · Captive portal",            v: "17 home with active session → G-10 captive banner overlay → 'Open portal' WebView → auto-dismiss on connectivity restored" },
+    { t: "teal",    k: "P-10 · Support / recovery",        v: "63 support → 64 FAQ OR 09 login → 12 forgot-password → 13 reset → S-03 biometric re-enroll → 17 home · all sessions invalidated on reset" },
   ];
-  for (let i = 0; i < journeys.length; i++) {
-    const [n, f] = journeys[i]; const y = i * 90;
-    createText(page, n, 0, y, 18, "#1C0804", PRIMARY_FONT_BOLD, 400);
-    createText(page, f, 0, y + 28, 14, "#7A6058", PRIMARY_FONT, 1200);
+  const integration = [
+    { t: "warning", k: "G-12 payment timeout",  v: "Re-enters S-07 with same Idempotency-Key · webhook source-of-truth · NEVER assume failed on timeout" },
+    { t: "warning", k: "G-14 trial expiry",     v: "First app open after trial expiry · modal route to convert (49/50) or downgrade (48) · NOT settings screen" },
+    { t: "warning", k: "G-04 deep-link",        v: "Authenticated → resumes destination · unauthenticated → routes through M2 then resumes · NEVER drops intent" },
+    { t: "purple",  k: "Reduced-motion alts",   v: "AI typing indicator · VPN connecting ring · sheet snap · all have cross-fade alternatives · haptics still fire" },
+    { t: "teal",    k: "RTL traversal",         v: "Every journey reviewed in Arabic · banners mirror correctly · numbers stay LTR · Cairo font · slide-in direction matches" },
+    { t: "teal",    k: "Dark traversal",        v: "Every journey reviewed in dark · contrast verified · brand role separation preserved (orange/teal/purple)" },
+  ];
+  const states = [
+    "Loading state on every list/detail (shimmer + skeleton from M1) · NEVER spinner-on-blank",
+    "Empty state on every list (illustration + CTA where one exists) · NEVER apologetic-only",
+    "Error state with actionable retry · maps B0 envelope · localized · NEVER raw provider message",
+    "Success state with appropriate haptic · receipt/confirmation surfaced · routes to next logical surface",
+    "Edge: G-02 no-internet banner overlays any screen · cached read-only where possible · auto-clears on reconnect",
+    "Edge: G-03 maintenance blocks app on cold open · partial banner if read-only · ETA copy when known (A17)",
+    "Edge: G-05 force-update full-screen · NEVER bypassable · per-platform store URL",
+    "Edge: G-15 returning-user welcome-back modal · DISTINCT from M2 first-run · light re-engagement only",
+  ];
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
   }
+  function fullRows(items, cardH, accentKey) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  y = sectionHeader(page, "01", "10 client-review journeys · auth → purchase → connect → AI → subscription → support", 0, y);
+  rules2col(journeys, 110);
+
+  y = sectionHeader(page, "02", "Cross-cutting · G-12 · G-14 · G-04 · reduced-motion · RTL · dark", 0, y);
+  rules2col(integration, 110);
+
+  y = sectionHeader(page, "03", "Universal states across journeys · loading · empty · error · success · edge", 0, y);
+  fullRows(states, 56, "purple");
 }
 
 // Backend phase pages — start with B0 only; later phases add their own entries.
@@ -4722,43 +4773,204 @@ async function buildChecklistPage(page, spec) {
 
 async function buildAccessibilityPage(page) {
   clearGeneratedChildren(page);
-  createText(page, "Accessibility", 0, -120, 32, "#1C0804", PRIMARY_FONT_BOLD);
-  createText(page, "WCAG 2.2 AA · 44pt touch targets · reduced-motion alternatives · screen-reader labels", 0, -72, 16, "#7A6058", PRIMARY_FONT, 1100);
-  const items = ["Color contrast tokens", "Touch targets", "Focus rings", "Screen reader labels", "Reduced motion", "Dynamic type", "RTL handling", "Captions + transcripts"];
-  for (let i = 0; i < items.length; i++) {
-    const col = i % 4, row = Math.floor(i / 4);
-    const card = createFrame(page, items[i], col * 360, row * 220, 340, 200, "#FFFFFF", "#E8E0DB");
-    card.cornerRadius = 12;
-    createText(card, items[i], 16, 16, 16, "#1C0804", PRIMARY_FONT_BOLD, 308);
-    createText(card, "Annotation placeholder", 16, 48, 12, "#7A6058");
+  const PAGE_W = 1472, COL_GAP = 32;
+  const spec = {
+    kicker: "ACCESSIBILITY · WCAG 2.2 AA · 44pt TARGETS · REDUCED-MOTION · SR LABELS · DYNAMIC TYPE · RTL · KEYBOARD",
+    title: "Accessibility",
+    subtitle: "Roamlu treats accessibility as a first-class invariant — not a polish pass. Every component in M1 ships with light + dark + RTL · reduced-motion alternative · haptic hook · screen-reader label · keyboard path. Admin (W1) is a daily-use internal tool — usability over decoration.",
+  };
+  let y = backendHeader(page, spec, PAGE_W);
+
+  const tokens = [
+    { t: "warning", k: "Color contrast tokens",  v: "Light bg #FFF8F4 + dark bg #181210 · text primary/secondary/disabled · semantic success/warning/error · ALL pairs verified ≥ 4.5:1 (body) · ≥ 3:1 (large/UI) · NEVER raw hex in widgets" },
+    { t: "warning", k: "Touch targets",          v: "Minimum 44pt × 44pt on iOS · 48dp × 48dp on Android · primary CTAs 56pt · spacing scale 4/8/12/16/20/24/32/40 enforces · admin clickable rows 40pt min" },
+    { t: "purple",  k: "Focus rings",            v: "2pt outline + 2pt offset · ring color uses brand orange in light · brand orange-tint in dark · tab order matches visual reading order · trapped in modals/sheets" },
+    { t: "purple",  k: "Screen-reader labels",   v: "Every Touchable has accessibilityLabel · semantic role · live-region for toast/banner · grouping for cards · numeric values read with unit (currency · minutes · GB)" },
+    { t: "purple",  k: "Reduced-motion",         v: "Respects platform setting · cross-fade alternatives for · VPN connecting ring · AI typing indicator · sheet snap · confetti/success · haptics still fire when motion suppressed" },
+    { t: "teal",    k: "Dynamic type",           v: "Supports OS text-size up to AX-3 / 200% · layout reflows (no clipping) · numeric LTR preserved in Arabic when scaled · admin tables collapse columns gracefully" },
+    { t: "warning", k: "RTL handling",           v: "Full mirroring via Directionality · Arabic uses Cairo (DM Sans does not support Arabic) · numbers/prices LTR inside Arabic layouts · banners mirror slide-in direction · bottom-nav reverses" },
+    { t: "teal",    k: "Captions + transcripts", v: "Voicemail audio (M4 VoIP) gets transcript · onboarding video (if any) gets captions · AI streaming responses readable via SR · NEVER audio-only critical info" },
+  ];
+  const componentRules = [
+    { t: "purple",  k: "Buttons",            v: "Primary/secondary/ghost · disabled state has 4.5:1 still · loading state announces 'busy' · destructive uses warning color + role" },
+    { t: "purple",  k: "Inputs",             v: "Label associated · error message announced via live-region · OTP input announces digit position · phone picker keyboard-accessible · password visibility toggle has SR label" },
+    { t: "purple",  k: "Cards",              v: "Heading hierarchy preserved · grouped for SR · pricing announced as '12 dirhams 50 fils' (currency unit + minor) · NEVER concatenated raw numbers" },
+    { t: "teal",    k: "Bottom sheet",       v: "Focus trapped · ESC/back closes · backdrop labeled 'dismiss' · drag handle has accessibility action · respects reduced-motion (no spring)" },
+    { t: "teal",    k: "Banners",            v: "live-region polite (info) or assertive (error) · dismiss has SR label · inline G-13 call-quality auto-announces · NEVER decorative-only" },
+    { t: "warning", k: "Biometric prompt",   v: "OS-native prompt (no custom) · fallback to password announced · failure state recoverable · NEVER repeated nag" },
+  ];
+  const surfaceCoverage = [
+    "Onboarding (M2) · GDPR consent SR-readable · OTP input announces position · biometric prompt OS-native · keyboard fully traversable",
+    "Home + eSIM (M3) · plan cards heading hierarchy · prices announced with currency unit · install guide screen-reader-friendly · provision-vs-install distinct",
+    "Connect (M4) · VPN connect button announces state change · server list filterable via SR · call quality G-13 auto-announces · incoming call CallKit native (accessible)",
+    "AI + Billing + Loyalty (M5) · AI chat bubble pairs role + author · streaming respects SR pacing · invoice rows screen-readable · referral share via platform sheet (accessible)",
+    "Account + System (M6) · session list per-row revoke labeled · deletion warning announced · S-06 lock OS-native step-up · G-03 maintenance announces ETA",
+    "Admin Web (W1) · keyboard-navigable tables · focus management in modals · sufficient contrast · NEVER decorative-only icons · all actions have SR labels",
+  ];
+  const testing = [
+    "Manual SR pass on iOS VoiceOver + Android TalkBack for the 10 critical journeys (R1) · localized in en + ar",
+    "Keyboard-only pass on web admin · all destructive/financial actions reachable + confirmable · focus traps in modals verified",
+    "Reduced-motion device setting toggle traversal · cross-fade alternatives confirmed · haptics still fire",
+    "Dynamic-type AX-3 traversal · layout reflows without clipping · numeric still LTR in Arabic",
+    "Color-contrast automated audit (axe-core / Figma a11y plugin) on every screen · CI gate on web admin",
+    "Localization fallback · missing ar string falls back to en (NEVER raw key) · mixed-script handling for names",
+  ];
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
   }
+  function fullRows(items, cardH, accentKey) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  y = sectionHeader(page, "01", "Foundational tokens · contrast · targets · focus · SR · motion · type · RTL · captions", 0, y);
+  rules2col(tokens, 130);
+
+  y = sectionHeader(page, "02", "Component-level rules · buttons · inputs · cards · sheets · banners · biometric", 0, y);
+  rules2col(componentRules, 110);
+
+  y = sectionHeader(page, "03", "Surface coverage · M2–M6 + W1 · how a11y attaches per phase", 0, y);
+  fullRows(surfaceCoverage, 64, "teal");
+
+  y = sectionHeader(page, "04", "Verification · manual SR · keyboard-only · reduced-motion · dynamic-type · contrast audit · localization", 0, y);
+  fullRows(testing, 56, "purple");
 }
 
 async function buildHandoffNotesPage(page) {
   clearGeneratedChildren(page);
-  createText(page, "Roamlu Handoff Notes", 0, -120, 32, "#1C0804", PRIMARY_FONT_BOLD);
-  const lines = [
-    "Critical implementation notes",
-    "",
-    "1. Light app background must be #FFF8F4. Dark must be #181210. Never pure white or pure black.",
-    "2. Every mobile screen needs light/ltr, dark/ltr, and Arabic RTL treatments.",
-    "3. Arabic uses Cairo. Latin UI uses DM Sans. Display headlines use DM Serif Display Italic.",
-    "4. Bottom nav fixed: Home · eSIM · Connect · Account. AI is never a bottom-nav tab.",
-    "5. Compliance G-06 through G-12 required before App Store submission.",
-    "6. Add accessibility annotations for every reusable component.",
-    "7. Add reduced-motion alternatives for VPN ring, AI typing, sheets.",
-    "8. eSIM provisioning requires Apple's CTCellularPlanProvisioning entitlement (~6 weeks).",
-    "9. 3DS (S-07) must be a sandboxed webview — no JS bridge, no shared cookies.",
-    "10. VPN G-07 disclaimer copy must be legally reviewed per jurisdiction.",
-    "",
-    GENERATION_NOTE
-  ].join("\n");
-  const note = figma.createText();
-  note.fontName = PRIMARY_FONT;
-  note.characters = lines;
-  note.x = 0; note.y = 0; note.resize(1200, 560);
-  note.fontSize = 16; note.fills = solidPaint("#1C0804");
-  tag(note); page.appendChild(note);
+  const PAGE_W = 1472, COL_GAP = 32;
+  const spec = {
+    kicker: "HANDOFF · IMPLEMENTATION PRIORITIES · COMPONENT INVENTORY · UNRESOLVED · RISKS · QA CHECKLIST",
+    title: "Roamlu Handoff Notes",
+    subtitle: "Single source-of-truth for the engineering pickup. Architecture · non-negotiables · component inventory · open decisions with owners · risks · QA + production readiness checklist. R1 phase consolidates testing/observability/deploy alongside this document.",
+  };
+  let y = backendHeader(page, spec, PAGE_W);
+
+  const nonNegotiables = [
+    { t: "warning", k: "Backgrounds",            v: "Light app bg = #FFF8F4 · dark app bg = #181210 · NEVER pure white / pure black · all surfaces token-driven (theme.css) · widgets reference tokens not raw hex" },
+    { t: "warning", k: "Theme coverage",         v: "Every mobile screen ships in light/LTR · dark/LTR · Arabic/RTL · numbers + prices LTR inside Arabic · Cairo for Arabic (DM Sans does not support it) · DM Serif Display italic for display headlines" },
+    { t: "warning", k: "Bottom nav",             v: "EXACTLY Home · eSIM · Connect · Account · AI is an entry-point feature NOT a tab · nav reverses in RTL · Connect is one tab merging VoIP + VPN" },
+    { t: "warning", k: "Money",                  v: "Integer minor units + ISO 4217 currency from API · NEVER float · NEVER recompute client-side · admin renders masked money exactly as API returns" },
+    { t: "warning", k: "Compliance gates",       v: "G-06 GDPR/PDPL · G-07 VPN disclaimer · G-08 inline refund ack · G-12 payment timeout · G-14 trial expiry · all REQUIRED before App Store submission · counsel-reviewed copy" },
+    { t: "purple",  k: "Brand role colors",      v: "Orange = CTAs · teal = VPN/security · purple = AI · warning amber = destructive/timeout · NEVER mix roles (e.g. orange VPN button breaks the pattern)" },
+    { t: "purple",  k: "Reduced-motion",         v: "VPN connecting ring · AI typing indicator · sheet snap · confetti/success · ALL have cross-fade alternatives · haptics still fire when motion is suppressed" },
+    { t: "teal",    k: "Generated clients",      v: "Dart + TS clients GENERATED from B2/B8 OpenAPI · NEVER hand-written · regenerate on contract change · widgets switch on typed result/error" },
+  ];
+  const componentInventory = [
+    { t: "purple",  k: "Buttons",            v: "Primary (orange) · secondary (outline) · ghost · destructive (warning) · loading state · disabled state · all token-driven · light/dark/RTL · haptic light on tap" },
+    { t: "purple",  k: "Inputs",             v: "Text · password (visibility toggle) · phone (Gulf-first picker) · OTP (6-digit · auto-advance · paste-aware) · validation · error live-region · NEVER raw HTML inputs in admin" },
+    { t: "purple",  k: "Cards",              v: "Surface card · plan card · receipt card · ledger row · session row · server row · referral status · all 12 radius · 1pt #E8E0DB border · subtle shadow" },
+    { t: "teal",    k: "Sheets + modals",    v: "Bottom sheet (drag handle · backdrop · ESC/back) · confirmation modal (destructive variant) · biometric prompt (OS-native) · 3DS webview · all focus-trapped" },
+    { t: "teal",    k: "Banners",            v: "G-02 no-internet · G-10 captive · G-11 VPN reconnecting · G-13 call quality · all overlay live screens · mirror in RTL · NEVER built as full pages" },
+    { t: "warning", k: "Specialized",        v: "VPN connecting ring (reduced-motion alt) · AI chat bubble · progress ring · shimmer/loading · empty/error illustration · biometric prompt · payment success haptic" },
+  ];
+  const openDecisions = [
+    { t: "warning", k: "Entity / domicile",                v: "Drives Stripe eligibility + every VAT obligation · RESOLVE FIRST · launch-blocking · owner: founders + legal" },
+    { t: "warning", k: "Place-of-supply ruling",           v: "Written ruling for eSIM/VoIP/VPN per market · ESPECIALLY before enabling KSA at 15% · launch-blocking for KSA · owner: tax counsel" },
+    { t: "warning", k: "Live PSP selection + e-invoicing", v: "Confirmed fees + recurring + onboarding · build ZATCA Phase 2 + UAE OR use Merchant of Record · launch-blocking · owner: finance + eng" },
+    { t: "warning", k: "Apple App Store · VPN channel",    v: "IAP vs external for VPN · eSIM/VoIP confirmed external · launch-blocking for iOS · owner: mobile lead + Apple liaison" },
+    { t: "warning", k: "Apple entitlements",               v: "eSIM CoreTelephony/CommCenter (likely unavailable → Universal-Link/manual install) · iOS Network Extension (VPN) · CallKit + PushKit (VoIP) · START EARLY · owner: mobile lead" },
+    { t: "warning", k: "Gulf VPN/VoIP legality",           v: "Per market · region-flag default = restricted-off until cleared · UAE/TDRA + KSA + Bahrain + Oman · launch-blocking per-market · owner: legal" },
+    { t: "purple",  k: "Refund policy wording",            v: "UAE/KSA consumer law alignment · G-08 inline copy · counsel-reviewed · per-language · owner: legal + product" },
+    { t: "purple",  k: "Loyalty economics",                v: "Earn rates · redeem ratios · expiry · per-market caps · NOT launch-blocking (post-soft-launch tunable in A12) · owner: business + finance" },
+    { t: "purple",  k: "Admin RBAC matrix",                v: "Final role/permission matrix + approval thresholds for refund/adjustment/disable · pre-prod · owner: ops lead" },
+    { t: "purple",  k: "Data retention windows",           v: "Per data class (auth · finance · audit · PII · ledger) · UAE PDPL + KSA + tax law · owner: legal · drives retention jobs" },
+  ];
+  const risks = [
+    "Apple eSIM entitlement likely unavailable to consumer apps · fallback Universal-Link/manual-install path documented + designed · NEVER promise in-app iOS provisioning",
+    "iOS Network Extension entitlement approval timeline 2–4 weeks · gates VPN submission · start the request before final QA",
+    "iOS PushKit unrestricted VoIP entitlement · without it incoming-call push degrades to standard notification · UX still works but degraded",
+    "PSP onboarding timeline (Stripe / Tap / Checkout / etc.) · KYB documents · expect 1–4 weeks per region · gates live commerce",
+    "Gulf VPN legality varies by market · region-flag default = restricted-off until per-market clearance · launch country list may shrink",
+    "Loyalty economics not finalized · launch with conservative ratios · A12 admin lets ops tune post-launch · NEVER lock in expiry policy without counsel review",
+    "Provider DLQ growth · webhook signature changes · provider API breaking changes · runbook covers replay + rotate · alerting on dead-letter growth",
+    "Reconciliation mismatches between internal ledger and PSP · finance reviews A19 daily during soft-launch · resolve-with-audit only · NEVER silent edits",
+  ];
+  const qaChecklist = [
+    "All 10 R1 critical journeys green in CI against sandbox adapters · deterministic seed · reproducible",
+    "Light + dark + RTL render every mobile screen · banners mirror correctly · numbers LTR in Arabic · Cairo loaded",
+    "Reduced-motion alternatives confirmed · VPN connecting ring · AI typing · sheet snap · haptics still fire",
+    "Money displayed from API minor units + currency · NEVER recomputed · masked fields exactly as API returns",
+    "Region gating strict · disabled markets refused cleanly · NEVER start-then-fail · regional_flags honored at every entry",
+    "Provision ≠ install verified for eSIM · install reported separately · NEVER claim install on purchase success",
+    "G-07 VPN disclaimer persisted before config issued · refusal blocks VPN entirely · per-market language",
+    "Idempotency-Key on every payment + provisioning POST · webhook source-of-truth · NEVER assume failed on timeout alone",
+    "Loyalty balance = sum(ledger) · NEVER client-cached · redemption applied at quote server-side",
+    "Admin RBAC enforced server-side · UI gating convenience only · audit-on-mutation · secret masking · NEVER 403-bound controls shown",
+    "Logging redacts secrets/PII/tokens/cards/provider creds · log-scrubbing tests green · correlation IDs across API → queue → webhook",
+    "Containerized deploy · env config · secrets vaulted · backups + restore drilled · runbook published · alerting routed",
+    "Open decisions classified launch-blocking vs post-soft-launch · go/no-go view shared with founders",
+    "Apple entitlement approvals in flight · eSIM channel (Universal-Link/manual-install) decision recorded",
+  ];
+  const fileGuide = [
+    "Foundations 1–14 · design system · components · accessibility · onboarding · auth · home · eSIM · VoIP · VPN · AI · billing · loyalty · account · system",
+    "Admin 15 · A00–A19 admin web screens · sidebar nav grouped Operations/Product/Commerce/Finance/System",
+    "Backend 16–23 · Build Pack roadmap · B0 setup · B1 data model · B2 API contract · B3 auth · B4 providers · B5 billing · FL finance/legal",
+    "Backend cont. · B6 loyalty · B7 AI advisor · B8 admin backend · W1 web admin · M1–M6 Flutter feature packs · R1 testing/observability/handoff",
+    "Review · per-phase ticked checklists + drift flags · global non-negotiables · all boxes ticked = full pack verified",
+    "Delivery · Prototype (10 client-review journeys + cross-cutting + universal states) · Handoff Notes (this page)",
+  ];
+
+  function rules2col(items, cardH) {
+    const colW = (PAGE_W - COL_GAP) / 2;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = col * (colW + COL_GAP);
+      const cy = y + row * (cardH + 12);
+      const accent = ACCENT[r.t] || ACCENT.orange;
+      const card = backendCard(page, cx, cy, colW, cardH, accent);
+      safeText(card, r.k, 24, 18, 12, accent, PRIMARY_FONT_BOLD, colW - 48);
+      safeText(card, r.v, 24, 40, 12, "#1C0804", PRIMARY_FONT, colW - 48);
+    }
+    y += Math.ceil(items.length / 2) * (cardH + 12) + 40;
+  }
+  function fullRows(items, cardH, accentKey) {
+    for (let i = 0; i < items.length; i++) {
+      const card = backendCard(page, 0, y, PAGE_W, cardH, ACCENT[accentKey] || ACCENT.teal);
+      safeText(card, items[i], 24, 22, 13, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
+      y += cardH + 8;
+    }
+    y += 32;
+  }
+
+  y = sectionHeader(page, "01", "Non-negotiables · backgrounds · themes · nav · money · compliance · brand colors · motion · clients", 0, y);
+  rules2col(nonNegotiables, 130);
+
+  y = sectionHeader(page, "02", "Component inventory · what M1 ships and what every feature pack reuses", 0, y);
+  rules2col(componentInventory, 110);
+
+  y = sectionHeader(page, "03", "Open decisions · each carries an owner · launch-blocking vs post-soft-launch", 0, y);
+  rules2col(openDecisions, 110);
+
+  y = sectionHeader(page, "04", "Risks · platform · entitlements · PSP · legality · economics · ops", 0, y);
+  fullRows(risks, 64, "warning");
+
+  y = sectionHeader(page, "05", "QA checklist · pre-launch verification across journeys · themes · invariants · admin · ops", 0, y);
+  fullRows(qaChecklist, 56, "purple");
+
+  y = sectionHeader(page, "06", "File guide · how this Figma file is organized for engineering pickup", 0, y);
+  fullRows(fileGuide, 64, "teal");
+
+  const footerCard = backendCard(page, 0, y, PAGE_W, 80, ACCENT.purple);
+  safeText(footerCard, "GENERATED BY", 24, 16, 10, ACCENT.purple, PRIMARY_FONT_BOLD, PAGE_W - 48);
+  safeText(footerCard, GENERATION_NOTE, 24, 36, 12, "#1C0804", PRIMARY_FONT, PAGE_W - 48);
 }
 
 async function assertSafeToRun() {

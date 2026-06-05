@@ -27,6 +27,9 @@ const PAGE_ORDER = [
   "■ M5 — AI, Billing & Loyalty",
   "■ M6 — Account, Notifications & System",
   "■ R1 — Testing, Observability & Handoff",
+  "■ PL — Pre-Launch Web",
+  "■ SS — Store Screenshots",
+  "■ IV — Intro Video Storyboard",
   "■ Review Checklists",
   "■ Prototype", "■ Handoff Notes"
 ];
@@ -5637,6 +5640,293 @@ async function assertSafeToRun() {
   return true;
 }
 
+// ── PL · Pre-Launch Web ──────────────────────────────────────────────────
+async function buildPreLaunchPage(page) {
+  page.children.forEach((c) => c.remove());
+  page.backgrounds = solidPaint("#FFF8F4");
+
+  function buildView(parent, x, y, w, h, kind) {
+    const f = createFrame(parent, kind + "/desktop", x, y, w, h, "#FFF8F4");
+    // Top bar
+    createRect(f, 0, 0, w, 64, "#FFE8DC");
+    createText(f, "Roamlu", 32, 22, 20, "#E05820");
+    createText(f, "Services   Coverage   How it works   FAQ", w - 560, 24, 13, "#7A6058");
+    createRect(f, w - 180, 16, 140, 32, "#E05820", 100);
+    createText(f, "Join the waitlist", w - 156, 24, 12, "#FFFFFF");
+    return f;
+  }
+
+  // 1. Countdown
+  const cd = buildView(page, 80, 80, 1440, 900, "01-countdown");
+  createText(cd, "ROAMLU · LAUNCHING SOON", 80, 140, 11, "#E05820");
+  createText(cd, "Travel\nWithout Limits", 80, 180, 96, "#1C0804", undefined, 1280);
+  createText(cd, "One app for global eSIM, virtual numbers, secure VPN,\nand an AI travel advisor.", 80, 410, 18, "#7A6058", undefined, 800);
+  // Countdown digits
+  const labels = ["44", "06", "12", "38"]; const cap = ["DAYS", "HOURS", "MIN", "SEC"];
+  labels.forEach((d, i) => {
+    const dx = 80 + i * 160;
+    createRect(cd, dx, 540, 140, 120, "#FFE8DC", 16);
+    createText(cd, d, dx + 30, 560, 64, "#E05820");
+    createText(cd, cap[i], dx + 32, 644, 11, "#7A6058");
+  });
+  // Email capture
+  createRect(cd, 80, 720, 520, 56, "#F5F0ED", 28);
+  createText(cd, "you@example.com", 110, 740, 15, "#7A6058");
+  createRect(cd, 612, 720, 160, 56, "#E05820", 28);
+  createText(cd, "Notify me", 660, 740, 14, "#FFFFFF");
+  createText(cd, "180+ COUNTRIES · ESIM · VPN · VOIP · AI ADVISOR", 80, 820, 11, "#7A6058");
+
+  // 2. Welcome
+  const wl = buildView(page, 1600, 80, 1440, 900, "02-welcome");
+  createRect(wl, 660, 130, 120, 120, "#22C55E", 60);
+  createText(wl, "✓", 700, 160, 64, "#FFFFFF");
+  createText(wl, "You're on the list", 480, 280, 64, "#1C0804");
+  createText(wl, "sara@roamlu.example", 600, 380, 14, "#7A6058");
+  ["We'll email you the moment Roamlu opens.", "Early access to launch pricing.", "Move up the list when friends join."].forEach((s, i) => {
+    const dx = 80 + i * 460;
+    createRect(wl, dx, 460, 420, 140, "#FFE8DC", 20);
+    createRect(wl, dx + 24, 484, 28, 28, "#E05820", 14);
+    createText(wl, String(i + 1), dx + 33, 489, 13, "#FFFFFF");
+    createText(wl, s, dx + 24, 528, 14, "#1C0804", undefined, 372);
+  });
+  createRect(wl, 380, 640, 680, 180, "#FFE8DC", 24);
+  createText(wl, "Invite friends, move up the list.", 540, 670, 13, "#7A6058");
+  createText(wl, "RML-X8K2-9PQ", 560, 700, 28, "#E05820");
+  createRect(wl, 540, 760, 100, 36, "#F5F0ED", 100);
+  createText(wl, "Copy", 575, 770, 13, "#1C0804");
+  createRect(wl, 660, 760, 100, 36, "#E05820", 100);
+  createText(wl, "Share", 695, 770, 13, "#FFFFFF");
+
+  // 3. Marketing landing
+  const mk = buildView(page, 80, 1060, 1440, 2200, "03-marketing");
+  createText(mk, "The travel layer for\na borderless life.", 80, 140, 64, "#1C0804", undefined, 800);
+  createText(mk, "Data, voice, privacy, and intelligence — wherever you land.", 80, 320, 17, "#7A6058");
+  createRect(mk, 80, 380, 200, 48, "#E05820", 24);
+  createText(mk, "Join the waitlist", 110, 396, 14, "#FFFFFF");
+  createRect(mk, 296, 380, 180, 48, "#F5F0ED", 24);
+  createText(mk, "See how it works", 320, 396, 14, "#1C0804");
+  // Phone mock
+  createRect(mk, 920, 100, 360, 600, "#1C0804", 40);
+  createRect(mk, 940, 120, 320, 560, "#FFE8DC", 32);
+  createText(mk, "Welcome back, Sara", 960, 200, 22, "#1C0804");
+  createRect(mk, 960, 280, 280, 100, "#FFFFFF", 16);
+  createText(mk, "Active eSIM · UAE", 980, 296, 11, "#7A6058");
+  createText(mk, "3.2 / 5 GB", 980, 314, 22, "#1C0804");
+  // Services
+  createText(mk, "Four services. One app.", 80, 800, 36, "#1C0804");
+  const svcs = [
+    ["eSIM", "Pick a country, scan, connect.", "#E05820"],
+    ["VoIP", "Local numbers, anywhere.", "#E05820"],
+    ["VPN", "Private on every Wi-Fi.", "#10A890"],
+    ["AI Advisor", "One question, the right plan.", "#8040D0"],
+  ];
+  svcs.forEach((s, i) => {
+    const dx = 80 + i * 340;
+    createRect(mk, dx, 880, 320, 200, "#FFE8DC", 20);
+    createRect(mk, dx + 24, 904, 44, 44, s[2], 12);
+    createText(mk, s[0], dx + 24, 970, 20, "#1C0804");
+    createText(mk, s[1], dx + 24, 1000, 13, "#7A6058", undefined, 280);
+  });
+  // Coverage
+  createText(mk, "Coverage that follows you.", 80, 1180, 36, "#1C0804");
+  createRect(mk, 80, 1240, 600, 280, "#FFE8DC", 20);
+  createText(mk, "180+ countries", 720, 1260, 56, "#E05820");
+  ["Gulf", "Europe", "Americas", "Africa", "Asia", "Oceania"].forEach((r, i) => {
+    const dx = 720 + (i % 3) * 200; const dy = 1360 + Math.floor(i / 3) * 60;
+    createRect(mk, dx, dy, 180, 44, "#F5F0ED", 12);
+    createText(mk, "· " + r, dx + 16, dy + 14, 14, "#1C0804");
+  });
+  // How it works
+  createText(mk, "How it works", 80, 1620, 36, "#1C0804");
+  ["Choose a plan", "Install & activate", "Travel connected"].forEach((h, i) => {
+    const dx = 80 + i * 460;
+    createRect(mk, dx, 1700, 420, 200, "#FFE8DC", 20);
+    createRect(mk, dx + 24, 1724, 36, 36, "#E05820", 18);
+    createText(mk, String(i + 1), dx + 36, 1733, 16, "#FFFFFF");
+    createText(mk, h, dx + 24, 1780, 18, "#1C0804");
+  });
+  // Final CTA
+  createRect(mk, 0, 2000, 1440, 200, "#FFE8DC");
+  createText(mk, "Be first when we open the doors.", 360, 2050, 36, "#1C0804");
+  createRect(mk, 620, 2120, 200, 48, "#E05820", 24);
+  createText(mk, "Join the waitlist", 650, 2136, 14, "#FFFFFF");
+
+  // Mobile variants
+  ["countdown", "welcome", "marketing"].forEach((kind, i) => {
+    const f = createFrame(page, "0" + (i + 1) + "-" + kind + "/mobile", 3160 + i * 440, 80, 390, 844, "#FFF8F4");
+    createRect(f, 0, 0, 390, 56, "#FFE8DC");
+    createText(f, "Roamlu", 20, 18, 16, "#E05820");
+    if (kind === "countdown") {
+      createText(f, "Travel\nWithout Limits", 24, 100, 36, "#1C0804", undefined, 342);
+      createText(f, "One app. Four superpowers.", 24, 220, 13, "#7A6058");
+      ["44", "06", "12", "38"].forEach((d, k) => {
+        const dx = 24 + k * 86;
+        createRect(f, dx, 280, 76, 80, "#FFE8DC", 12);
+        createText(f, d, dx + 14, 296, 32, "#E05820");
+        createText(f, ["DAYS", "HRS", "MIN", "SEC"][k], dx + 16, 340, 9, "#7A6058");
+      });
+      createRect(f, 24, 400, 342, 48, "#F5F0ED", 24);
+      createText(f, "you@example.com", 44, 416, 13, "#7A6058");
+      createRect(f, 24, 460, 342, 48, "#E05820", 24);
+      createText(f, "Notify me", 160, 476, 14, "#FFFFFF");
+    } else if (kind === "welcome") {
+      createRect(f, 165, 100, 60, 60, "#22C55E", 30);
+      createText(f, "✓", 185, 116, 28, "#FFFFFF");
+      createText(f, "You're on the list", 90, 180, 26, "#1C0804");
+      createText(f, "RML-X8K2-9PQ", 130, 240, 22, "#E05820");
+      createRect(f, 24, 300, 342, 80, "#FFE8DC", 16);
+      createText(f, "Invite friends, move up.", 44, 332, 13, "#1C0804");
+    } else {
+      createText(f, "Borderless travel,\nin one app.", 24, 100, 28, "#1C0804", undefined, 342);
+      createRect(f, 24, 240, 342, 48, "#E05820", 24);
+      createText(f, "Join the waitlist", 130, 256, 14, "#FFFFFF");
+    }
+  });
+}
+
+// ── SS · Store Screenshots ───────────────────────────────────────────────
+async function buildStoreScreenshotsPage(page) {
+  page.children.forEach((c) => c.remove());
+  page.backgrounds = solidPaint("#F5F0ED");
+
+  const STORES = [
+    { id: "apple", name: "App Store · 1290×2796", w: 1290, h: 2796, chrome: "ios" },
+    { id: "google", name: "Google Play · 1080×1920", w: 1080, h: 1920, chrome: "android" },
+    { id: "huawei", name: "AppGallery · 1080×1920", w: 1080, h: 1920, chrome: "huawei" },
+  ];
+  const SLIDES = [
+    { h: "Travel Without Limits", s: "One app for eSIM, voice, VPN, and AI advice", acc: "#E05820", bg: "#FFE8DC" },
+    { h: "eSIM in 60 seconds", s: "180+ countries, instant activation", acc: "#E05820", bg: "#FFD9C4" },
+    { h: "Always-on VPN", s: "Private on hotel Wi-Fi, anywhere", acc: "#10A890", bg: "#D0F4EE" },
+    { h: "A real phone number", s: "Local Gulf, EU, US — calls + SMS", acc: "#E05820", bg: "#FFE8DC" },
+    { h: "AI travel advisor", s: "Ask once, get the right plan", acc: "#8040D0", bg: "#EDE0FF" },
+  ];
+
+  let cursorY = 80;
+  STORES.forEach((store) => {
+    createText(page, store.name, 80, cursorY, 22, "#1C0804");
+    cursorY += 50;
+    SLIDES.forEach((sl, i) => {
+      const x = 80 + i * (store.w * 0.35 + 40);
+      const w = store.w; const h = store.h;
+      const f = createFrame(page, store.id + "/" + String(i + 1).padStart(2, "0") + "-" + sl.h.toLowerCase().replace(/[^a-z0-9]+/g, "-"), x, cursorY, w, h, sl.bg);
+      // Headline
+      createText(f, sl.h, w * 0.07, h * 0.07, w * 0.085, "#1C0804", undefined, w * 0.86);
+      createText(f, sl.s, w * 0.07, h * 0.18, w * 0.032, "#7A6058", undefined, w * 0.86);
+      // Phone frame
+      const pw = w * 0.7; const ph = h * 0.62; const px = (w - pw) / 2; const py = h * 0.32;
+      createRect(f, px, py, pw, ph, "#0A0606", 64);
+      createRect(f, px + 14, py + 14, pw - 28, ph - 28, "#FFF8F4", 52);
+      // Slide content
+      const ix = px + 30; const iy = py + 70; const iw = pw - 60;
+      if (i === 0) {
+        createText(f, "Welcome back, Sara", ix, iy, 36, "#1C0804", undefined, iw);
+        createRect(f, ix, iy + 90, iw, 140, "#FFE8DC", 24);
+        createText(f, "Active eSIM · UAE", ix + 24, iy + 110, 18, "#7A6058");
+        createText(f, "3.2 / 5 GB", ix + 24, iy + 138, 44, "#1C0804");
+        createRect(f, ix + 24, iy + 200, iw - 48, 12, "#F5F0ED", 6);
+        createRect(f, ix + 24, iy + 200, (iw - 48) * 0.64, 12, "#E05820", 6);
+      } else if (i === 1) {
+        ["🇸🇦 Saudi Arabia · $7.90", "🇦🇪 UAE · $14.50", "🇪🇺 Europe · $22.00", "🇹🇷 Türkiye · $9.20"].forEach((row, k) => {
+          const ry = iy + k * 160;
+          createRect(f, ix, ry, iw, 130, k === 0 ? "#FFD9C4" : "#FFE8DC", 24);
+          createText(f, row, ix + 24, ry + 50, 26, "#1C0804", undefined, iw - 48);
+        });
+      } else if (i === 2) {
+        createText(f, "Protected · Dubai", ix, iy, 18, "#10A890");
+        createText(f, "You're safe", ix, iy + 30, 36, "#1C0804");
+        createRect(f, ix + iw / 2 - 140, iy + 200, 280, 280, "#10A890", 140);
+      } else if (i === 3) {
+        createText(f, "Your number,", ix, iy, 36, "#1C0804");
+        createText(f, "everywhere.", ix, iy + 50, 36, "#1C0804");
+        createRect(f, ix, iy + 140, iw, 120, "#FFE8DC", 24);
+        createText(f, "+971 50 234 5678", ix + 30, iy + 180, 38, "#E05820");
+      } else {
+        createText(f, "AI Advisor", ix, iy, 16, "#8040D0");
+        createText(f, "Ask once.", ix, iy + 28, 36, "#1C0804");
+        createText(f, "Travel smart.", ix, iy + 70, 36, "#1C0804");
+        ["Going to Dubai for 6 days?", "UAE 5GB ($14.50) — best value.", "Yes, set it up."].forEach((m, k) => {
+          createRect(f, k % 2 === 0 ? ix : ix + 60, iy + 150 + k * 90, iw - 60, 70, k % 2 === 0 ? "#FFFFFF" : "#E05820", 20);
+          createText(f, m, (k % 2 === 0 ? ix : ix + 60) + 20, iy + 175 + k * 90, 18, k % 2 === 0 ? "#1C0804" : "#FFFFFF");
+        });
+      }
+      // Brand
+      createText(f, "Roamlu", w * 0.07, h * 0.95, w * 0.04, sl.acc);
+      createText(f, String(i + 1).padStart(2, "0") + " / 05", w * 0.78, h * 0.955, w * 0.022, "#7A6058");
+    });
+    cursorY += SLIDES[0].h ? STORES[0].h * 0.4 + 100 : 0; // approximate row height
+    cursorY += 1200;
+  });
+}
+
+// ── IV · Intro Video Storyboard ──────────────────────────────────────────
+async function buildIntroVideoPage(page) {
+  page.children.forEach((c) => c.remove());
+  page.backgrounds = solidPaint("#F5F0ED");
+
+  const SCENES = [
+    ["00:00 – 00:03.5", "logo", "Logo reveal — gradient bloom, signal arcs."],
+    ["00:03.5 – 00:07.5", "tagline", "Tagline · DM Serif Italic."],
+    ["00:07.5 – 00:11.5", "esim", "eSIM · plan card lands · Activated."],
+    ["00:11.5 – 00:15.5", "vpn", "VPN · shield pulse · Protected."],
+    ["00:15.5 – 00:19.5", "voip", "VoIP · number types out · ringing."],
+    ["00:19.5 – 00:23.5", "ai", "AI · chat bubbles · recommendation."],
+    ["00:23.5 – 00:30.0", "cta", "CTA · store badges · logo lockup."],
+  ];
+
+  createText(page, "Roamlu · App Intro · 30s · 1080×1920", 80, 60, 22, "#1C0804");
+  createText(page, "Render path at handoff: After Effects + Lottie or Rive · export mp4 + webm.", 80, 96, 14, "#7A6058");
+
+  SCENES.forEach((sc, i) => {
+    const x = 80 + (i % 4) * 520; const y = 160 + Math.floor(i / 4) * 1280;
+    const f = createFrame(page, String(i + 1).padStart(2, "0") + "-" + sc[1], x, y, 480, 1200, "#0A0606");
+    createRect(f, 14, 14, 452, 1172, "#FFE8DC", 28);
+    // Progress bars
+    for (let k = 0; k < SCENES.length; k++) {
+      createRect(f, 30 + k * 60, 30, 50, 4, k <= i ? "#E05820" : "#7A6058", 2);
+    }
+    // Scene-specific
+    if (sc[1] === "logo") {
+      createRect(f, 140, 480, 200, 200, "#E05820", 30);
+      createText(f, "R", 220, 540, 96, "#FFFFFF");
+    } else if (sc[1] === "tagline") {
+      createText(f, "Travel\nWithout Limits", 60, 480, 56, "#1C0804", undefined, 360);
+      createText(f, "One app. Four superpowers.", 80, 660, 16, "#7A6058");
+    } else if (sc[1] === "esim") {
+      createText(f, "eSIM in 60s", 40, 100, 32, "#1C0804");
+      createRect(f, 40, 200, 400, 140, "#FFD9C4", 20);
+      createText(f, "UAE · 5GB · 7d", 60, 220, 14, "#7A6058");
+      createText(f, "$14.50", 60, 250, 36, "#E05820");
+      createRect(f, 40, 360, 140, 36, "#22C55E", 18);
+      createText(f, "✓ Activated", 64, 372, 14, "#FFFFFF");
+    } else if (sc[1] === "vpn") {
+      createRect(f, 140, 480, 200, 200, "#10A890", 100);
+      createText(f, "Protected", 170, 720, 24, "#10A890");
+    } else if (sc[1] === "voip") {
+      createText(f, "Your number", 40, 100, 28, "#1C0804");
+      createRect(f, 40, 200, 400, 100, "#FFE8DC", 20);
+      createText(f, "+971 50 234 5678", 60, 230, 28, "#E05820");
+    } else if (sc[1] === "ai") {
+      createText(f, "AI Advisor", 40, 100, 14, "#8040D0");
+      ["Dubai, 6 days?", "UAE 5GB · $14.50.", "Yes."].forEach((m, k) => {
+        const isUser = k % 2 === 0;
+        createRect(f, isUser ? 200 : 40, 160 + k * 90, 220, 70, isUser ? "#E05820" : "#FFFFFF", 18);
+        createText(f, m, (isUser ? 200 : 40) + 16, 188 + k * 90, 14, isUser ? "#FFFFFF" : "#1C0804");
+      });
+    } else {
+      createText(f, "Coming soon to\nall your stores.", 40, 200, 28, "#1C0804", undefined, 400);
+      ["App Store", "Google Play", "AppGallery"].forEach((s, k) => {
+        createRect(f, 40, 380 + k * 56, 400, 44, "#1C0804", 12);
+        createText(f, s, 180, 392 + k * 56, 14, "#FFFFFF");
+      });
+      createText(f, "Roamlu", 180, 600, 22, "#E05820");
+    }
+    // Caption
+    createText(f, sc[0], 40, 1080, 13, "#E05820");
+    createText(f, sc[2], 40, 1108, 12, "#7A6058", undefined, 400);
+  });
+}
+
 async function main() {
   if (!(await assertSafeToRun())) return;
 
@@ -5689,6 +5979,9 @@ async function main() {
     "page:m5": "■ M5 — AI, Billing & Loyalty",
     "page:m6": "■ M6 — Account, Notifications & System",
     "page:r1": "■ R1 — Testing, Observability & Handoff",
+    "page:pl": "■ PL — Pre-Launch Web",
+    "page:ss": "■ SS — Store Screenshots",
+    "page:iv": "■ IV — Intro Video Storyboard",
     "page:pr": "■ Prototype",
     "page:ho": "■ Handoff Notes"
   };
@@ -5700,6 +5993,9 @@ async function main() {
     if (pageName === "■ Components") return buildComponentsPage(p);
     if (pageName === "■ Accessibility & Testing") return buildAccessibilityPage(p);
     if (pageName === "■ 12 — Admin Web") return buildAdminPage(p);
+    if (pageName === "■ PL — Pre-Launch Web") return buildPreLaunchPage(p);
+    if (pageName === "■ SS — Store Screenshots") return buildStoreScreenshotsPage(p);
+    if (pageName === "■ IV — Intro Video Storyboard") return buildIntroVideoPage(p);
     if (pageName === "■ Prototype") return buildPrototypePage(p);
     if (pageName === "■ Handoff Notes") return buildHandoffNotesPage(p);
     const ms = MOBILE_SECTIONS.find(s => s.page === pageName);
@@ -5715,6 +6011,9 @@ async function main() {
     for (const s of MOBILE_SECTIONS) await buildMobilePage(byName[s.page], s.screens);
     await buildAdminPage(byName["■ 12 — Admin Web"]);
     for (const b of BACKEND_PAGES) if (byName[b.name]) await buildBackendPage(byName[b.name], b);
+    if (byName["■ PL — Pre-Launch Web"]) await buildPreLaunchPage(byName["■ PL — Pre-Launch Web"]);
+    if (byName["■ SS — Store Screenshots"]) await buildStoreScreenshotsPage(byName["■ SS — Store Screenshots"]);
+    if (byName["■ IV — Intro Video Storyboard"]) await buildIntroVideoPage(byName["■ IV — Intro Video Storyboard"]);
     await buildPrototypePage(byName["■ Prototype"]);
     await buildHandoffNotesPage(byName["■ Handoff Notes"]);
   } else if (PAGE_CMD[cmd]) {

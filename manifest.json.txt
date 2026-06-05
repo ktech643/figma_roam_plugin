@@ -79,6 +79,11 @@
     { "name": "WEB ADMIN FRONTEND", "menu": [
       { "name": "W1 · Web Admin Frontend", "command": "page:w1" }
     ]},
+    { "name": "LAUNCH ASSETS", "menu": [
+      { "name": "PL · Pre-Launch Web",        "command": "page:pl" },
+      { "name": "SS · Store Screenshots",     "command": "page:ss" },
+      { "name": "IV · Intro Video Storyboard","command": "page:iv" }
+    ]},
     { "name": "DELIVERY", "menu": [
       { "name": "R1 · Testing, Observability & Handoff", "command": "page:r1" },
       { "name": "PR · Prototype",     "command": "page:pr" },

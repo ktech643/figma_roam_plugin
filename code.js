@@ -445,8 +445,59 @@ function drawAdminChrome(frame, id, title, isTablet) {
   createRect(frame, sidebarW, 64, w - sidebarW, 1, "#E8E0DB");
   createText(frame, title, sidebarW + 24, 22, 18, "#1C0804", PRIMARY_FONT_BOLD);
   createText(frame, id, w - 80, 24, 11, "#7A6058");
-  createRect(frame, sidebarW + 24, 88, w - sidebarW - 48, frame.height - 112, "#FFFFFF", 12);
-  createText(frame, "[ admin content ]", sidebarW + 40, 108, 13, "#7A6058");
+  // KPI strip
+  const kpiY = 88, kpiW = isTablet ? 160 : 240;
+  const kpis = [
+    ["MRR", "AED 142,840"],
+    ["Active eSIMs", "8,421"],
+    ["VoIP minutes", "412k"],
+    ["VPN sessions", "1,204"]
+  ];
+  for (let i = 0; i < (isTablet ? 3 : kpis.length); i++) {
+    const kx = sidebarW + 24 + i * (kpiW + 16);
+    const card = createFrame(frame, `kpi-${kpis[i][0]}`, kx, kpiY, kpiW, 96, "#FFFFFF", "#E8E0DB");
+    card.cornerRadius = 12;
+    createText(card, kpis[i][0], 16, 12, 11, "#7A6058");
+    createText(card, kpis[i][1], 16, 36, 22, "#1C0804", PRIMARY_FONT_BOLD, kpiW - 32);
+  }
+
+  // Data table
+  const tableY = kpiY + 96 + 24;
+  const tableW = w - sidebarW - 48;
+  const tableH = frame.height - tableY - 24;
+  const table = createFrame(frame, `${id}-table`, sidebarW + 24, tableY, tableW, tableH, "#FFFFFF", "#E8E0DB");
+  table.cornerRadius = 12;
+  createText(table, title + " · last 50", 20, 16, 13, "#1C0804", PRIMARY_FONT_BOLD, tableW - 40);
+  // header row
+  const cols = isTablet ? ["ID", "User", "Status"] : ["ID", "User", "Market", "Amount", "Status", "Updated"];
+  const colW = (tableW - 40) / cols.length;
+  createRect(table, 20, 56, tableW - 40, 1, "#E8E0DB");
+  for (let i = 0; i < cols.length; i++) {
+    createText(table, cols[i], 20 + i * colW, 36, 11, "#7A6058", PRIMARY_FONT_BOLD, colW - 8);
+  }
+  // rows
+  const rows = [
+    ["#10421", "fatima.a@…", "AE", "AED 89.00", "paid", "2m"],
+    ["#10420", "omar.s@…",   "SA", "SAR 220.00","provisioned", "5m"],
+    ["#10419", "lara.m@…",   "AE", "AED 45.00", "refunded", "12m"],
+    ["#10418", "yousef.h@…", "QA", "QAR 60.00", "paid", "18m"],
+    ["#10417", "noura.k@…",  "BH", "BHD 8.000", "failed", "31m"],
+    ["#10416", "kareem.r@…", "OM", "OMR 4.500", "paid", "44m"],
+    ["#10415", "amal.t@…",   "AE", "AED 120.00","paid", "1h"],
+    ["#10414", "saif.q@…",   "SA", "SAR 180.00","past_due", "2h"]
+  ];
+  const rowH = 36;
+  const maxRows = Math.min(rows.length, Math.floor((tableH - 80) / rowH));
+  for (let r = 0; r < maxRows; r++) {
+    const ry = 64 + r * rowH;
+    const row = rows[r];
+    for (let c = 0; c < cols.length; c++) {
+      const v = isTablet ? (c === 0 ? row[0] : c === 1 ? row[1] : row[4]) : row[c];
+      const fg = (cols[c] === "Status") ? (v === "paid" ? "#10A890" : v === "failed" || v === "past_due" ? "#B42318" : "#7A6058") : "#1C0804";
+      createText(table, v, 20 + c * colW, ry, 12, fg, PRIMARY_FONT, colW - 8);
+    }
+    createRect(table, 20, ry + rowH - 4, tableW - 40, 1, "#F2EDE9");
+  }
 }
 
 async function createStyles() {
@@ -481,6 +532,53 @@ async function buildDesignSystemPage(page) {
     createText(card, "D", 152, 132, 10, "#7A6058");
     sx += 240; if (sx > 1400) { sx = 40; sy += 180; }
   }
+
+  // Section B — Typography
+  let ty = 1060;
+  for (const t of TEXT_TOKENS) {
+    const row = createFrame(page, t.name, 40, ty, 1620, 64, "#FFFFFF", "#E8E0DB");
+    row.cornerRadius = 8;
+    createText(row, t.name, 16, 12, 11, "#7A6058", PRIMARY_FONT, 220);
+    createText(row, `${t.family} · ${t.style} · ${t.size}/${t.lineHeight}`, 240, 12, 11, "#7A6058", PRIMARY_FONT, 280);
+    createText(row, t.description, 16, 36, 11, "#A89A92", PRIMARY_FONT, 220);
+    createText(row, "The quick brown fox jumps", 540, 18, t.size, "#1C0804", PRIMARY_FONT, 1000);
+    ty += 76;
+    if (ty > 1880) break;
+  }
+
+  // Section C — Spacing & Radius
+  const SPACING = [4, 8, 12, 16, 24, 32, 48, 64];
+  let cx = 40, cy = 2040;
+  for (const s of SPACING) {
+    const card = createFrame(page, `space-${s}`, cx, cy, 180, 140, "#FFFFFF", "#E8E0DB");
+    card.cornerRadius = 8;
+    createText(card, `space-${s}`, 12, 8, 11, "#7A6058");
+    createRect(card, 12, 36, s, 12, "#E05820", 2);
+    createRect(card, 12, 60, s, 12, "#10A890", 2);
+    createText(card, `${s}px`, 12, 96, 13, "#1C0804", PRIMARY_FONT_BOLD);
+    cx += 200; if (cx > 1500) { cx = 40; cy += 160; }
+  }
+  const RADII = [4, 8, 12, 16, 24];
+  cy += 160; cx = 40;
+  for (const r of RADII) {
+    const card = createFrame(page, `radius-${r}`, cx, cy, 180, 140, "#FFFFFF", "#E8E0DB");
+    card.cornerRadius = 8;
+    createText(card, `radius-${r}`, 12, 8, 11, "#7A6058");
+    createRect(card, 12, 32, 96, 64, "#E05820", r);
+    createText(card, `${r}px`, 12, 108, 13, "#1C0804", PRIMARY_FONT_BOLD);
+    cx += 200;
+  }
+
+  // Section D — Icons & Illustrations
+  const ICONS = ["esim","voip","vpn","ai","loyalty","wallet","trip","support","push","biometric","fingerprint","face-id","alert","success","empty"];
+  let ix = 40, iy = 2840;
+  for (const n of ICONS) {
+    const card = createFrame(page, `icon-${n}`, ix, iy, 120, 120, "#FFFFFF", "#E8E0DB");
+    card.cornerRadius = 8;
+    createRect(card, 36, 24, 48, 48, "#FFE4D6", 12);
+    createText(card, n, 12, 88, 11, "#7A6058");
+    ix += 140; if (ix > 1540) { ix = 40; iy += 140; }
+  }
 }
 
 async function buildComponentsPage(page) {
@@ -488,12 +586,116 @@ async function buildComponentsPage(page) {
   createText(page, "Roamlu Components", 0, -120, 32, "#1C0804", PRIMARY_FONT_BOLD);
   createText(page, "Auto Layout · light + dark + RTL variants required", 0, -72, 16, "#7A6058", PRIMARY_FONT, 900);
   const sections = [
-    ["Buttons & Inputs",     0,    0, 1500, 720],
-    ["Cards & Navigation",   0,  800, 1500, 720],
-    ["Security & System",    0, 1600, 1500, 720],
-    ["AI · VPN · Voice",     0, 2400, 1500, 720]
+    {
+      name: "Buttons & Inputs", y: 0,
+      items: [
+        { kind: "btn", label: "Primary", bg: "#E05820", fg: "#FFFFFF" },
+        { kind: "btn", label: "Secondary", bg: "#FFFFFF", fg: "#E05820", border: "#E05820" },
+        { kind: "btn", label: "Tertiary", bg: "transparent", fg: "#1C0804" },
+        { kind: "btn", label: "Destructive", bg: "#B42318", fg: "#FFFFFF" },
+        { kind: "btn", label: "Disabled", bg: "#F2EDE9", fg: "#A89A92" },
+        { kind: "input", label: "Text input", placeholder: "Email" },
+        { kind: "input", label: "Password", placeholder: "••••••••" },
+        { kind: "input", label: "OTP", placeholder: "1 2 3 4 5 6" },
+        { kind: "chip", label: "Filter chip" },
+        { kind: "toggle", label: "Toggle on", on: true },
+        { kind: "toggle", label: "Toggle off", on: false }
+      ]
+    },
+    {
+      name: "Cards & Navigation", y: 800,
+      items: [
+        { kind: "card", title: "Active eSIM · UAE", body: "8.4 GB / 10 GB · 12 days left", cta: "Top up" },
+        { kind: "card", title: "VoIP · +971 50 ...", body: "428 / 1000 mins this cycle", cta: "Manage" },
+        { kind: "card", title: "VPN · Frankfurt", body: "Connected · 1h 24m", cta: "Disconnect" },
+        { kind: "tab", labels: ["Home","eSIM","Connect","Account"] },
+        { kind: "list", rows: ["Account · Profile","Account · Security","Account · Privacy","Account · Help"] }
+      ]
+    },
+    {
+      name: "Security & System", y: 1600,
+      items: [
+        { kind: "card", title: "G-01 Maintenance", body: "Roamlu is briefly offline for an upgrade.", cta: "Status page" },
+        { kind: "card", title: "G-02 No internet", body: "We'll resume once you're back online.", cta: "Retry" },
+        { kind: "card", title: "G-05 Update required", body: "A newer version is required to continue.", cta: "Open store" },
+        { kind: "card", title: "G-13 Consent", body: "Review and accept the privacy policy.", cta: "Review" },
+        { kind: "card", title: "G-15 Permission", body: "Allow Notifications to receive trip alerts.", cta: "Open settings" }
+      ]
+    },
+    {
+      name: "AI · VPN · Voice", y: 2400,
+      items: [
+        { kind: "card", title: "AI Advisor · Plan suggestion", body: "Airalo · UAE · 10 GB / 30 days · AED 89", cta: "Add to cart" },
+        { kind: "card", title: "VPN region picker", body: "Frankfurt · 24 ms · WireGuard", cta: "Connect" },
+        { kind: "card", title: "Incoming call", body: "+44 20 7946 0958 · CallKit", cta: "Answer" },
+        { kind: "card", title: "Voicemail", body: "0:42 · transcribed", cta: "Play" }
+      ]
+    }
   ];
-  for (const [n, x, y, w, h] of sections) createSection(page, n, x, y, w, h);
+
+  for (const s of sections) {
+    createSection(page, s.name, 0, s.y, 1620, 720);
+    let x = 40, y = s.y + 80;
+    for (const it of s.items) {
+      if (it.kind === "btn") {
+        const w = 160, h = 44;
+        const b = createFrame(page, `btn-${it.label}`, x, y, w, h, it.bg === "transparent" ? "#FFFFFF" : it.bg, it.border || (it.bg === "transparent" ? "#E8E0DB" : null));
+        b.cornerRadius = 8;
+        createText(b, it.label, 16, 12, 13, it.fg, PRIMARY_FONT_BOLD, w - 32);
+        x += w + 16;
+      } else if (it.kind === "input") {
+        const w = 220, h = 56;
+        const b = createFrame(page, `input-${it.label}`, x, y, w, h, "#FFFFFF", "#E8E0DB");
+        b.cornerRadius = 8;
+        createText(b, it.label, 12, 8, 10, "#7A6058");
+        createText(b, it.placeholder, 12, 28, 13, "#A89A92", PRIMARY_FONT, w - 24);
+        x += w + 16;
+      } else if (it.kind === "chip") {
+        const w = 120, h = 32;
+        const b = createFrame(page, `chip-${it.label}`, x, y + 6, w, h, "#FFE4D6");
+        b.cornerRadius = 16;
+        createText(b, it.label, 16, 8, 11, "#E05820", PRIMARY_FONT_BOLD, w - 32);
+        x += w + 16;
+      } else if (it.kind === "toggle") {
+        const b = createFrame(page, `toggle-${it.label}`, x, y + 6, 60, 32, it.on ? "#10A890" : "#E8E0DB");
+        b.cornerRadius = 16;
+        createRect(b, it.on ? 32 : 4, 4, 24, 24, "#FFFFFF", 12);
+        createText(page, it.label, x, y + 44, 11, "#7A6058");
+        x += 96;
+      } else if (it.kind === "card") {
+        const w = 320, h = 160;
+        if (x + w > 1580) { x = 40; y += h + 24; }
+        const b = createFrame(page, `card-${it.title}`, x, y, w, h, "#FFFFFF", "#E8E0DB");
+        b.cornerRadius = 12;
+        createText(b, it.title, 16, 16, 14, "#1C0804", PRIMARY_FONT_BOLD, w - 32);
+        createText(b, it.body, 16, 44, 12, "#7A6058", PRIMARY_FONT, w - 32);
+        const cta = createFrame(b, `cta`, 16, h - 48, 120, 32, "#E05820");
+        cta.cornerRadius = 8;
+        createText(cta, it.cta, 12, 8, 12, "#FFFFFF", PRIMARY_FONT_BOLD, 96);
+        x += w + 24;
+      } else if (it.kind === "tab") {
+        const w = 480, h = 64;
+        if (x + w > 1580) { x = 40; y += h + 24; }
+        const b = createFrame(page, `tab-bar`, x, y, w, h, "#FFFFFF", "#E8E0DB");
+        b.cornerRadius = 12;
+        for (let i = 0; i < it.labels.length; i++) {
+          const tw = w / it.labels.length;
+          createText(b, it.labels[i], i * tw + 16, 22, 12, i === 0 ? "#E05820" : "#7A6058", PRIMARY_FONT_BOLD, tw - 32);
+        }
+        x += w + 24;
+      } else if (it.kind === "list") {
+        const w = 320, h = 220;
+        if (x + w > 1580) { x = 40; y += h + 24; }
+        const b = createFrame(page, `list`, x, y, w, h, "#FFFFFF", "#E8E0DB");
+        b.cornerRadius = 12;
+        for (let i = 0; i < it.rows.length; i++) {
+          createText(b, it.rows[i], 16, 16 + i * 48, 13, "#1C0804", PRIMARY_FONT, w - 32);
+          createRect(b, 16, 48 + i * 48, w - 32, 1, "#F2EDE9");
+        }
+        x += w + 24;
+      }
+    }
+  }
 }
 
 async function buildMobilePage(page, screens) {

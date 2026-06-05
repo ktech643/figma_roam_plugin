@@ -1,0 +1,8 @@
+secrets.env
+secrets.*.env
+secrets.flutter.env
+*.p8
+*.p12
+*.jks
+*.pem
+*-sa.json
